@@ -17,7 +17,7 @@ MODELS_PATH.mkdir(exist_ok=True)
 # Dataset configuration
 HARMFUL_PEST_CLASSES = [
     'beetle',
-    'caterpillar', 
+    'catterpillar',
     'earwig',
     'grasshopper',
     'moth',
@@ -97,7 +97,7 @@ ECONOMIC_IMPACT = {
 # Urgency levels for treatment (based on pest behavior and damage potential)
 TREATMENT_URGENCY = {
     'beetle': 'Medium',      # Can be managed with regular monitoring
-    'caterpillar': 'High',   # Rapid reproduction and damage
+    'catterpillar': 'High',   # Rapid reproduction and damage
     'earwig': 'Medium',      # Nocturnal, manageable with traps
     'grasshopper': 'High',   # Can quickly devastate crops
     'moth': 'High',          # Adult laying eggs for damaging larvae
