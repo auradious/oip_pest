@@ -84,7 +84,7 @@ MODEL_PATHS = {
 # Economic impact ratings for harmful pests (1-5 scale, 5 being most severe)
 ECONOMIC_IMPACT = {
     'beetle': 4,      # High crop damage, leaf consumption
-    'caterpillar': 5, # Very high - significant crop losses
+    'catterpillar': 5, # Very high - significant crop losses
     'earwig': 3,      # Moderate - plant and fruit damage
     'grasshopper': 5, # Very high - extensive crop damage
     'moth': 4,        # High - larvae cause substantial damage
