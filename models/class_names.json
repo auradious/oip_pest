@@ -1,0 +1,44 @@
+{
+  "class_to_idx": {
+    "beetle": 0,
+    "earwig": 1,
+    "grasshopper": 2,
+    "moth": 3,
+    "slug": 4,
+    "snail": 5,
+    "wasp": 6,
+    "weevil": 7
+  },
+  "idx_to_class": {
+    "0": "beetle",
+    "1": "earwig",
+    "2": "grasshopper",
+    "3": "moth",
+    "4": "slug",
+    "5": "snail",
+    "6": "wasp",
+    "7": "weevil"
+  },
+  "harmful_classes": [
+    "beetle",
+    "caterpillar",
+    "earwig",
+    "grasshopper",
+    "moth",
+    "slug",
+    "snail",
+    "wasp",
+    "weevil"
+  ],
+  "class_counts": {
+    "beetle": 416,
+    "caterpillar": 0,
+    "earwig": 466,
+    "grasshopper": 485,
+    "moth": 497,
+    "slug": 391,
+    "snail": 500,
+    "wasp": 498,
+    "weevil": 485
+  }
+}
