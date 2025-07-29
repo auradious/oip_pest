@@ -1,5 +1,6 @@
 #ignore environment
 .venv
+*/__pycache__/
 
 #ignore dataset
 dataset/
