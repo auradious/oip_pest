@@ -1,6 +1,6 @@
 """
 Model training module for Organic Farm Pest Management AI System
-Handles CNN model creation, training, and evaluation
+Custom CNN architecture with layer-by-layer optimization
 """
 
 import os
@@ -27,7 +27,7 @@ from src.data_preprocessing import PestDataPreprocessor
 
 class PestClassificationModel:
     """
-    CNN model for harmful pest classification
+    Custom CNN model for harmful pest classification - optimized layer by layer
     """
     
     def __init__(self):
@@ -38,7 +38,7 @@ class PestClassificationModel:
         self.training_start_time = None
         self.training_end_time = None
         
-        print(f"🤖 Initializing Pest Classification Model...")
+        print(f"🤖 Initializing Custom CNN Model...")
         print(f"🎯 Target classes: {len(HARMFUL_PEST_CLASSES)}")
         
         # Set random seeds for reproducibility
@@ -47,117 +47,137 @@ class PestClassificationModel:
         
     def create_model(self, num_classes):
         """
-        Create CNN architecture for pest classification
+        Create optimized custom CNN architecture
+        Starting simple and building up complexity
         """
-        print(f"\n🏗️  Creating CNN model architecture...")
+        print(f"\n🏗️  Creating Custom CNN architecture...")
+        print(f"📐 Input shape: {MODEL_CONFIG['input_shape']}")
+        print(f"🎯 Number of classes: {num_classes}")
         
         model = models.Sequential([
             # Input layer
             layers.Input(shape=MODEL_CONFIG['input_shape']),
             
-            # First Convolutional Block
-            layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
-            layers.BatchNormalization(),
-            layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
-            layers.MaxPooling2D((2, 2)),
-            layers.Dropout(0.25),
+            # Data normalization (crucial for stability)
+            layers.Rescaling(1./255.0),
             
-            # Second Convolutional Block
-            layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
-            layers.BatchNormalization(),
-            layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
-            layers.MaxPooling2D((2, 2)),
-            layers.Dropout(0.25),
+            # Block 1: Start with more filters and proper padding
+            layers.Conv2D(64, (3, 3), activation='relu', padding='same', name='conv1_1'),
+            layers.BatchNormalization(name='bn1_1'),
+            layers.Conv2D(64, (3, 3), activation='relu', padding='same', name='conv1_2'),
+            layers.BatchNormalization(name='bn1_2'),
+            layers.MaxPooling2D((2, 2), name='pool1'),
+            layers.Dropout(0.2, name='dropout1'),
             
-            # Third Convolutional Block
-            layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
-            layers.BatchNormalization(),
-            layers.Conv2D(128, (3, 3), activation='relu', padding='same'),
-            layers.MaxPooling2D((2, 2)),
-            layers.Dropout(0.25),
+            # Block 2: Increase complexity
+            layers.Conv2D(128, (3, 3), activation='relu', padding='same', name='conv2_1'),
+            layers.BatchNormalization(name='bn2_1'),
+            layers.Conv2D(128, (3, 3), activation='relu', padding='same', name='conv2_2'),
+            layers.BatchNormalization(name='bn2_2'),
+            layers.MaxPooling2D((2, 2), name='pool2'),
+            layers.Dropout(0.25, name='dropout2'),
             
-            # Fourth Convolutional Block
-            layers.Conv2D(256, (3, 3), activation='relu', padding='same'),
-            layers.BatchNormalization(),
-            layers.Conv2D(256, (3, 3), activation='relu', padding='same'),
-            layers.MaxPooling2D((2, 2)),
-            layers.Dropout(0.25),
+            # Block 3: More feature maps
+            layers.Conv2D(256, (3, 3), activation='relu', padding='same', name='conv3_1'),
+            layers.BatchNormalization(name='bn3_1'),
+            layers.Conv2D(256, (3, 3), activation='relu', padding='same', name='conv3_2'),
+            layers.BatchNormalization(name='bn3_2'),
+            layers.MaxPooling2D((2, 2), name='pool3'),
+            layers.Dropout(0.3, name='dropout3'),
             
-            # Fifth Convolutional Block
-            layers.Conv2D(512, (3, 3), activation='relu', padding='same'),
-            layers.BatchNormalization(),
-            layers.GlobalAveragePooling2D(),
-            layers.Dropout(0.5),
+            # Block 4: Deep features
+            layers.Conv2D(512, (3, 3), activation='relu', padding='same', name='conv4_1'),
+            layers.BatchNormalization(name='bn4_1'),
+            layers.Conv2D(512, (3, 3), activation='relu', padding='same', name='conv4_2'),
+            layers.BatchNormalization(name='bn4_2'),
+            layers.MaxPooling2D((2, 2), name='pool4'),
+            layers.Dropout(0.35, name='dropout4'),
             
-            # Dense layers
-            layers.Dense(512, activation='relu'),
-            layers.BatchNormalization(),
-            layers.Dropout(0.5),
+            # Global pooling instead of flatten (reduces overfitting)
+            layers.GlobalAveragePooling2D(name='global_avg_pool'),
             
-            layers.Dense(256, activation='relu'),
-            layers.Dropout(0.3),
+            # Dense layers with proper regularization
+            layers.Dense(512, activation='relu', name='dense1'),
+            layers.BatchNormalization(name='bn_dense1'),
+            layers.Dropout(0.5, name='dropout_dense1'),
+            
+            layers.Dense(256, activation='relu', name='dense2'),
+            layers.BatchNormalization(name='bn_dense2'),
+            layers.Dropout(0.4, name='dropout_dense2'),
             
             # Output layer
-            layers.Dense(num_classes, activation='softmax')
+            layers.Dense(num_classes, activation='softmax', name='predictions')
         ])
         
-        # Compile model
+        # Use a proper learning rate and optimizer
+        initial_learning_rate = 0.001  # Higher than before
+        
         model.compile(
-            optimizer=optimizers.Adam(learning_rate=MODEL_CONFIG['learning_rate']),
+            optimizer=optimizers.Adam(
+                learning_rate=initial_learning_rate,
+                beta_1=0.9,
+                beta_2=0.999,
+                epsilon=1e-7
+            ),
             loss='sparse_categorical_crossentropy',
-            metrics=['accuracy']
+            metrics=['accuracy', 'top_2_accuracy']  # Added top-2 accuracy for better monitoring
         )
         
-        print(f"✅ Model created successfully!")
+        print(f"✅ Custom CNN model created successfully!")
         print(f"📊 Total parameters: {model.count_params():,}")
         print(f"🎯 Output classes: {num_classes}")
+        print(f"📚 Learning rate: {initial_learning_rate}")
         
         return model
     
     def create_callbacks(self):
         """
-        Create training callbacks
+        Create optimized training callbacks
         """
         print(f"\n🔧 Setting up training callbacks...")
         
         callbacks = [
+            # Early stopping with more patience
             EarlyStopping(
-                monitor=TRAINING_CONFIG['monitor'],
-                patience=TRAINING_CONFIG['early_stopping_patience'],
+                monitor='val_accuracy',  # Monitor accuracy instead of loss
+                patience=15,  # More patience
                 restore_best_weights=True,
                 verbose=1,
-                mode=TRAINING_CONFIG['mode']
+                mode='max'  # Maximize accuracy
             ),
             
+            # Learning rate reduction
             ReduceLROnPlateau(
                 monitor='val_loss',
-                factor=TRAINING_CONFIG['reduce_lr_factor'],
-                patience=TRAINING_CONFIG['reduce_lr_patience'],
-                min_lr=TRAINING_CONFIG['min_lr'],
-                verbose=1
+                factor=0.5,  # Cut learning rate in half
+                patience=7,  # Wait 7 epochs
+                min_lr=1e-7,
+                verbose=1,
+                cooldown=3
             ),
             
+            # Model checkpoint
             ModelCheckpoint(
                 filepath=str(MODEL_PATHS['best_model']),
-                monitor=TRAINING_CONFIG['monitor'],
-                save_best_only=TRAINING_CONFIG['save_best_only'],
+                monitor='val_accuracy',
+                save_best_only=True,
                 verbose=1,
-                mode=TRAINING_CONFIG['mode']
+                mode='max'
             )
         ]
         
         print(f"✅ Callbacks configured:")
-        print(f"  • Early stopping patience: {TRAINING_CONFIG['early_stopping_patience']}")
-        print(f"  • Learning rate reduction patience: {TRAINING_CONFIG['reduce_lr_patience']}")
-        print(f"  • Model checkpoint: {MODEL_PATHS['best_model']}")
+        print(f"  • Early stopping patience: 15 epochs")
+        print(f"  • Learning rate reduction patience: 7 epochs")
+        print(f"  • Monitoring: val_accuracy (maximize)")
         
         return callbacks
     
     def train_model(self, save_model=True):
         """
-        Complete training pipeline
+        Train the custom CNN model with proper data handling
         """
-        print(f"\n🚀 Starting model training pipeline...")
+        print(f"\n🚀 Starting Custom CNN training pipeline...")
         self.training_start_time = datetime.now()
         
         # Step 1: Data preprocessing
@@ -171,17 +191,39 @@ class PestClassificationModel:
         if len(valid_classes) < 2:
             raise ValueError("Need at least 2 classes with data for training!")
         
+        print(f"🎯 Found {len(valid_classes)} classes with data")
+        
         # Load and preprocess images
         X, y, image_paths = self.preprocessor.load_and_preprocess_images()
+        
+        print(f"📊 Total samples loaded: {len(X)}")
+        print(f"📊 Image shape: {X[0].shape}")
+        print(f"📊 Label range: {min(y)} to {max(y)}")
         
         # Split dataset
         (X_train, X_val, X_test), (y_train, y_val, y_test), _ = self.preprocessor.split_dataset(X, y, image_paths)
         
-        # Compute class weights
-        class_weights = self.preprocessor.compute_class_weights(y_train)
+        # Print actual split numbers
+        print(f"\n📊 Final dataset split:")
+        print(f"  🏋️  Training samples: {len(X_train)}")
+        print(f"  ✅ Validation samples: {len(X_val)}")
+        print(f"  🧪 Test samples: {len(X_test)}")
         
-        # Create data generators
-        train_generator, val_generator = self.preprocessor.create_data_generators(X_train, y_train, X_val, y_val)
+        # Check class distribution in training set
+        unique, counts = np.unique(y_train, return_counts=True)
+        print(f"\n📊 Training set class distribution:")
+        for class_idx, count in zip(unique, counts):
+            class_name = self.preprocessor.idx_to_class[class_idx]
+            print(f"  {class_name}: {count} samples")
+        
+        # Compute class weights for imbalanced data
+        class_weights = self.preprocessor.compute_class_weights(y_train)
+        print(f"\n⚖️  Class weights computed for balancing")
+        
+        # Create data generators with better augmentation
+        train_generator, val_generator = self.preprocessor.create_data_generators(
+            X_train, y_train, X_val, y_val
+        )
         
         # Step 2: Model creation
         print(f"\n2️⃣  Model Creation Phase")
@@ -190,26 +232,29 @@ class PestClassificationModel:
         self.class_names = [self.preprocessor.idx_to_class[i] for i in range(num_classes)]
         
         # Display model architecture
-        print(f"\n📋 Model Architecture Summary:")
+        print(f"\n📋 Custom CNN Model Architecture:")
         self.model.summary()
         
-        # Step 3: Training setup
-        print(f"\n3️⃣  Training Setup Phase")
+        # Step 3: Training
+        print(f"\n3️⃣  Training Phase")
+        
         callbacks = self.create_callbacks()
         
-        # Step 4: Model training
-        print(f"\n4️⃣  Model Training Phase")
         print(f"🎯 Training for up to {MODEL_CONFIG['epochs']} epochs...")
         print(f"📊 Batch size: {MODEL_CONFIG['batch_size']}")
-        print(f"⚖️  Using class weights to handle imbalance")
+        print(f"🔄 Steps per epoch: {len(train_generator)}")
+        print(f"✅ Validation steps: {len(val_generator)}")
         
+        # Train the model
         self.history = self.model.fit(
             train_generator,
             epochs=MODEL_CONFIG['epochs'],
             validation_data=val_generator,
             callbacks=callbacks,
             class_weight=class_weights,
-            verbose=1
+            verbose=1,
+            workers=4,
+            use_multiprocessing=False
         )
         
         self.training_end_time = datetime.now()
@@ -218,30 +263,49 @@ class PestClassificationModel:
         print(f"\n✅ Training completed!")
         print(f"⏱️  Training duration: {training_duration}")
         
-        # Step 5: Model evaluation
-        print(f"\n5️⃣  Model Evaluation Phase")
+        # Step 4: Model evaluation
+        print(f"\n4️⃣  Model Evaluation Phase")
         self.evaluate_model(X_test, y_test)
         
-        # Step 6: Save model and results
+        # Step 5: Save model and results
         if save_model:
-            print(f"\n6️⃣  Saving Model Phase")
+            print(f"\n5️⃣  Saving Model Phase")
             self.save_model_and_results()
         
         return self.history
     
     def evaluate_model(self, X_test, y_test):
         """
-        Comprehensive model evaluation
+        Comprehensive model evaluation with detailed analysis
         """
-        print(f"\n📊 Evaluating model performance...")
+        print(f"\n📊 Evaluating Custom CNN model performance...")
         
-        # Make predictions
-        y_pred_proba = self.model.predict(X_test, verbose=0)
+        # Make predictions on test set
+        print(f"🔄 Making predictions on {len(X_test)} test samples...")
+        y_pred_proba = self.model.predict(X_test, verbose=1)
         y_pred = np.argmax(y_pred_proba, axis=1)
         
-        # Calculate accuracy
+        # Calculate metrics
         test_accuracy = accuracy_score(y_test, y_pred)
-        print(f"🎯 Test Accuracy: {test_accuracy:.4f} ({test_accuracy*100:.2f}%)")
+        print(f"\n🎯 Test Accuracy: {test_accuracy:.4f} ({test_accuracy*100:.2f}%)")
+        
+        # Check if accuracy is still low
+        if test_accuracy < 0.3:
+            print(f"⚠️  WARNING: Low accuracy detected! Let's analyze the issues...")
+            self.diagnose_low_accuracy(X_test, y_test, y_pred_proba)
+        
+        # Get prediction confidence
+        confidence_scores = np.max(y_pred_proba, axis=1)
+        avg_confidence = np.mean(confidence_scores)
+        print(f"🔍 Average Prediction Confidence: {avg_confidence:.4f} ({avg_confidence*100:.2f}%)")
+        
+        # Per-class accuracy
+        print(f"\n📊 Per-class accuracy:")
+        for i, class_name in enumerate(self.class_names):
+            class_mask = y_test == i
+            if np.sum(class_mask) > 0:
+                class_acc = accuracy_score(y_test[class_mask], y_pred[class_mask])
+                print(f"  {class_name}: {class_acc:.4f} ({class_acc*100:.2f}%) - {np.sum(class_mask)} samples")
         
         # Classification report
         print(f"\n📋 Detailed Classification Report:")
@@ -256,13 +320,202 @@ class PestClassificationModel:
         # Visualizations
         self.plot_training_history()
         self.plot_confusion_matrix(y_test, y_pred)
-        self.plot_classification_metrics(class_report)
+        self.plot_prediction_analysis(y_pred_proba, y_test, y_pred)
         
         return test_accuracy, class_report
     
+    def diagnose_low_accuracy(self, X_test, y_test, y_pred_proba):
+        """
+        Diagnose potential issues when accuracy is low
+        """
+        print(f"\n🔍 DIAGNOSTIC ANALYSIS - Investigating low accuracy...")
+        
+        # 1. Check prediction distribution
+        y_pred = np.argmax(y_pred_proba, axis=1)
+        pred_unique, pred_counts = np.unique(y_pred, return_counts=True)
+        
+        print(f"\n1️⃣  Prediction Distribution Analysis:")
+        total_preds = len(y_pred)
+        for class_idx, count in zip(pred_unique, pred_counts):
+            class_name = self.class_names[class_idx] if class_idx < len(self.class_names) else f"Class_{class_idx}"
+            print(f"  Predicted {class_name}: {count} times ({count/total_preds*100:.1f}%)")
+        
+        # 2. Check if model is predicting only one class
+        most_predicted_class = pred_unique[np.argmax(pred_counts)]
+        max_pred_ratio = np.max(pred_counts) / total_preds
+        
+        if max_pred_ratio > 0.8:
+            print(f"❌ ISSUE: Model predicting mostly one class ({self.class_names[most_predicted_class]}: {max_pred_ratio*100:.1f}%)")
+            print(f"   This suggests the model hasn't learned to distinguish between classes.")
+        
+        # 3. Check confidence scores
+        confidence_scores = np.max(y_pred_proba, axis=1)
+        avg_confidence = np.mean(confidence_scores)
+        
+        print(f"\n2️⃣  Confidence Analysis:")
+        print(f"  Average confidence: {avg_confidence:.4f}")
+        print(f"  Confidence std: {np.std(confidence_scores):.4f}")
+        
+        if avg_confidence < 0.4:
+            print(f"❌ ISSUE: Very low confidence scores suggest the model is uncertain about its predictions.")
+        
+        # 4. Check true vs predicted distribution
+        true_unique, true_counts = np.unique(y_test, return_counts=True)
+        
+        print(f"\n3️⃣  True vs Predicted Distribution:")
+        print(f"  True distribution:")
+        for class_idx, count in zip(true_unique, true_counts):
+            class_name = self.class_names[class_idx]
+            print(f"    {class_name}: {count} samples ({count/len(y_test)*100:.1f}%)")
+        
+        # 5. Suggest fixes
+        print(f"\n🔧 SUGGESTED FIXES:")
+        print(f"1. Increase learning rate (current: try 0.01 instead of 0.001)")
+        print(f"2. Reduce model complexity (fewer layers or filters)")
+        print(f"3. Check data quality (are images correctly labeled?)")
+        print(f"4. Increase data augmentation")
+        print(f"5. Train for more epochs")
+        print(f"6. Check for data leakage or preprocessing issues")
+        
+        # 6. Show some misclassified examples
+        if len(X_test) > 0:
+            self.show_misclassified_examples(X_test, y_test, y_pred, max_examples=6)
+    
+    def show_misclassified_examples(self, X_test, y_test, y_pred, max_examples=6):
+        """
+        Show examples of misclassified images for analysis
+        """
+        misclassified_indices = np.where(y_test != y_pred)[0]
+        
+        if len(misclassified_indices) == 0:
+            print(f"✅ No misclassified examples found!")
+            return
+        
+        print(f"\n4️⃣  Misclassified Examples Analysis:")
+        print(f"Total misclassified: {len(misclassified_indices)}")
+        
+        # Show a few examples
+        num_examples = min(max_examples, len(misclassified_indices))
+        
+        fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+        axes = axes.flatten()
+        
+        for i in range(num_examples):
+            idx = misclassified_indices[i]
+            
+            # Denormalize image for display
+            img = X_test[idx]
+            if np.max(img) <= 1.0:  # If normalized
+                img = (img * 255).astype(np.uint8)
+            
+            axes[i].imshow(img)
+            axes[i].axis('off')
+            
+            true_class = self.class_names[y_test[idx]]
+            pred_class = self.class_names[y_pred[idx]]
+            
+            axes[i].set_title(f"True: {true_class}\nPred: {pred_class}", 
+                            fontsize=10, color='red', fontweight='bold')
+        
+        # Hide unused subplots
+        for i in range(num_examples, len(axes)):
+            axes[i].axis('off')
+        
+        plt.suptitle('🔍 Misclassified Examples - Diagnostic Analysis', fontsize=14, fontweight='bold')
+        plt.tight_layout()
+        plt.show()
+    
+    def plot_prediction_analysis(self, y_pred_proba, y_test, y_pred):
+        """
+        Detailed prediction analysis plots
+        """
+        fig, axes = plt.subplots(2, 2, figsize=(15, 12))
+        
+        # 1. Confidence distribution
+        confidence_scores = np.max(y_pred_proba, axis=1)
+        correct_predictions = (y_pred == y_test)
+        
+        axes[0, 0].hist(confidence_scores, bins=30, alpha=0.7, color='skyblue', edgecolor='black')
+        axes[0, 0].axvline(np.mean(confidence_scores), color='red', linestyle='--', 
+                          label=f'Mean: {np.mean(confidence_scores):.3f}')
+        axes[0, 0].set_xlabel('Prediction Confidence')
+        axes[0, 0].set_ylabel('Frequency')
+        axes[0, 0].set_title('🔍 Prediction Confidence Distribution', fontweight='bold')
+        axes[0, 0].legend()
+        axes[0, 0].grid(True, alpha=0.3)
+        
+        # 2. Correct vs Incorrect confidence
+        if np.sum(~correct_predictions) > 0:
+            correct_conf = confidence_scores[correct_predictions]
+            incorrect_conf = confidence_scores[~correct_predictions]
+            
+            axes[0, 1].hist(correct_conf, bins=20, alpha=0.7, label='Correct', 
+                           color='green', edgecolor='black')
+            axes[0, 1].hist(incorrect_conf, bins=20, alpha=0.7, label='Incorrect', 
+                           color='red', edgecolor='black')
+            axes[0, 1].set_xlabel('Prediction Confidence')
+            axes[0, 1].set_ylabel('Frequency')
+            axes[0, 1].set_title('🎯 Confidence: Correct vs Incorrect', fontweight='bold')
+            axes[0, 1].legend()
+            axes[0, 1].grid(True, alpha=0.3)
+        else:
+            axes[0, 1].text(0.5, 0.5, 'All predictions correct!', 
+                           ha='center', va='center', fontsize=16, fontweight='bold')
+            axes[0, 1].set_title('🎯 Perfect Accuracy!', fontweight='bold')
+        
+        # 3. Per-class accuracy
+        class_accuracies = []
+        class_names_with_data = []
+        
+        for i, class_name in enumerate(self.class_names):
+            class_mask = y_test == i
+            if np.sum(class_mask) > 0:
+                class_acc = np.mean(y_pred[class_mask] == y_test[class_mask])
+                class_accuracies.append(class_acc)
+                class_names_with_data.append(class_name)
+        
+        if class_accuracies:
+            bars = axes[1, 0].bar(range(len(class_accuracies)), class_accuracies, 
+                                 color='lightcoral', alpha=0.7)
+            axes[1, 0].set_xlabel('Classes')
+            axes[1, 0].set_ylabel('Accuracy')
+            axes[1, 0].set_title('📊 Per-Class Accuracy', fontweight='bold')
+            axes[1, 0].set_xticks(range(len(class_names_with_data)))
+            axes[1, 0].set_xticklabels(class_names_with_data, rotation=45, ha='right')
+            axes[1, 0].grid(True, alpha=0.3)
+            
+            # Add value labels on bars
+            for bar, acc in zip(bars, class_accuracies):
+                height = bar.get_height()
+                axes[1, 0].text(bar.get_x() + bar.get_width()/2., height + 0.01,
+                               f'{acc:.3f}', ha='center', va='bottom', fontweight='bold')
+        
+        # 4. Prediction matrix heatmap
+        pred_matrix = np.zeros((len(self.class_names), len(self.class_names)))
+        for true_label, pred_label in zip(y_test, y_pred):
+            pred_matrix[true_label, pred_label] += 1
+        
+        # Normalize by row (true labels)
+        pred_matrix_norm = pred_matrix / (pred_matrix.sum(axis=1, keepdims=True) + 1e-8)
+        
+        im = axes[1, 1].imshow(pred_matrix_norm, cmap='Blues', aspect='auto')
+        axes[1, 1].set_xlabel('Predicted Label')
+        axes[1, 1].set_ylabel('True Label')
+        axes[1, 1].set_title('🎯 Normalized Confusion Matrix', fontweight='bold')
+        axes[1, 1].set_xticks(range(len(self.class_names)))
+        axes[1, 1].set_yticks(range(len(self.class_names)))
+        axes[1, 1].set_xticklabels(self.class_names, rotation=45, ha='right')
+        axes[1, 1].set_yticklabels(self.class_names)
+        
+        # Add colorbar
+        plt.colorbar(im, ax=axes[1, 1])
+        
+        plt.tight_layout()
+        plt.show()
+    
     def plot_training_history(self):
         """
-        Plot training history
+        Plot training history with enhanced analysis
         """
         if self.history is None:
             print("❌ No training history available!")
@@ -270,9 +523,13 @@ class PestClassificationModel:
         
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
         
+        epochs = range(1, len(self.history.history['accuracy']) + 1)
+        
         # Accuracy plot
-        axes[0, 0].plot(self.history.history['accuracy'], 'b-', label='Training Accuracy', linewidth=2)
-        axes[0, 0].plot(self.history.history['val_accuracy'], 'r-', label='Validation Accuracy', linewidth=2)
+        axes[0, 0].plot(epochs, self.history.history['accuracy'], 'b-', 
+                       label='Training Accuracy', linewidth=2)
+        axes[0, 0].plot(epochs, self.history.history['val_accuracy'], 'r-', 
+                       label='Validation Accuracy', linewidth=2)
         axes[0, 0].set_title('📈 Model Accuracy', fontsize=14, fontweight='bold')
         axes[0, 0].set_xlabel('Epoch')
         axes[0, 0].set_ylabel('Accuracy')
@@ -280,8 +537,10 @@ class PestClassificationModel:
         axes[0, 0].grid(True, alpha=0.3)
         
         # Loss plot
-        axes[0, 1].plot(self.history.history['loss'], 'b-', label='Training Loss', linewidth=2)
-        axes[0, 1].plot(self.history.history['val_loss'], 'r-', label='Validation Loss', linewidth=2)
+        axes[0, 1].plot(epochs, self.history.history['loss'], 'b-', 
+                       label='Training Loss', linewidth=2)
+        axes[0, 1].plot(epochs, self.history.history['val_loss'], 'r-', 
+                       label='Validation Loss', linewidth=2)
         axes[0, 1].set_title('📉 Model Loss', fontsize=14, fontweight='bold')
         axes[0, 1].set_xlabel('Epoch')
         axes[0, 1].set_ylabel('Loss')
@@ -290,8 +549,8 @@ class PestClassificationModel:
         
         # Learning rate plot (if available)
         if 'lr' in self.history.history:
-            axes[1, 0].plot(self.history.history['lr'], 'g-', linewidth=2)
-            axes[1, 0].set_title('📊 Learning Rate Schedule', fontsize=14, fontweight='bold')
+            axes[1, 0].plot(epochs, self.history.history['lr'], 'g-', linewidth=2)
+            axes[1, 0].set_title('📊 Learning Rate', fontsize=14, fontweight='bold')
             axes[1, 0].set_xlabel('Epoch')
             axes[1, 0].set_ylabel('Learning Rate')
             axes[1, 0].set_yscale('log')
@@ -302,12 +561,16 @@ class PestClassificationModel:
         # Training summary
         final_train_acc = self.history.history['accuracy'][-1]
         final_val_acc = self.history.history['val_accuracy'][-1]
+        best_val_acc = max(self.history.history['val_accuracy'])
         final_train_loss = self.history.history['loss'][-1]
         final_val_loss = self.history.history['val_loss'][-1]
-        best_val_acc = max(self.history.history['val_accuracy'])
+        
+        # Check for overfitting
+        overfitting_gap = final_train_acc - final_val_acc
+        overfitting_status = "⚠️ OVERFITTING" if overfitting_gap > 0.15 else "✅ Good"
         
         summary_text = f"""
-Training Summary:
+Custom CNN Training Summary:
 
 Final Training Accuracy: {final_train_acc:.4f}
 Final Validation Accuracy: {final_val_acc:.4f}
@@ -316,113 +579,60 @@ Best Validation Accuracy: {best_val_acc:.4f}
 Final Training Loss: {final_train_loss:.4f}
 Final Validation Loss: {final_val_loss:.4f}
 
-Total Epochs: {len(self.history.history['accuracy'])}
+Overfitting Check: {overfitting_status}
+(Gap: {overfitting_gap:.4f})
+
+Total Epochs: {len(epochs)}
 Classes: {len(self.class_names)}
+Parameters: {self.model.count_params():,}
         """
         
-        axes[1, 1].text(0.1, 0.5, summary_text, fontsize=11, verticalalignment='center',
-                        bbox=dict(boxstyle="round,pad=0.5", facecolor="lightblue", alpha=0.7))
+        axes[1, 1].text(0.05, 0.95, summary_text, fontsize=10, verticalalignment='top',
+                        bbox=dict(boxstyle="round,pad=0.5", facecolor="lightblue", alpha=0.7),
+                        transform=axes[1, 1].transAxes)
         axes[1, 1].set_title('📊 Training Summary', fontsize=14, fontweight='bold')
         axes[1, 1].axis('off')
         
         plt.tight_layout()
         plt.show()
+        
+        # Print diagnosis
+        print(f"\n📊 Training Diagnosis:")
+        if final_val_acc < 0.3:
+            print(f"❌ Low validation accuracy ({final_val_acc:.3f}) - Model not learning well")
+            print(f"   Suggestions: Increase learning rate, reduce model complexity, check data")
+        elif overfitting_gap > 0.15:
+            print(f"⚠️  Overfitting detected (gap: {overfitting_gap:.3f})")
+            print(f"   Suggestions: Add more dropout, reduce model complexity, add more data")
+        else:
+            print(f"✅ Training looks good! Validation accuracy: {final_val_acc:.3f}")
     
     def plot_confusion_matrix(self, y_true, y_pred):
         """
-        Plot confusion matrix
+        Plot confusion matrix with enhanced details
         """
         cm = confusion_matrix(y_true, y_pred)
         
-        plt.figure(figsize=(10, 8))
+        # Calculate percentages
+        cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis] * 100
+        
+        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
+        
+        # Raw numbers
         sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
                     xticklabels=self.class_names,
-                    yticklabels=self.class_names)
-        plt.title('🎯 Confusion Matrix', fontsize=16, fontweight='bold')
-        plt.xlabel('Predicted Label')
-        plt.ylabel('True Label')
-        plt.xticks(rotation=45, ha='right')
-        plt.yticks(rotation=0)
-        plt.tight_layout()
-        plt.show()
-    
-    def plot_classification_metrics(self, class_report):
-        """
-        Plot classification metrics per class
-        """
-        # Extract metrics for each class
-        classes = [cls for cls in class_report.keys() if cls not in ['accuracy', 'macro avg', 'weighted avg']]
+                    yticklabels=self.class_names, ax=ax1)
+        ax1.set_title('🎯 Confusion Matrix (Counts)', fontsize=16, fontweight='bold')
+        ax1.set_xlabel('Predicted Label')
+        ax1.set_ylabel('True Label')
         
-        precision = [class_report[cls]['precision'] for cls in classes]
-        recall = [class_report[cls]['recall'] for cls in classes]
-        f1_score = [class_report[cls]['f1-score'] for cls in classes]
-        
-        # Create subplots
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 10))
-        
-        # Precision, Recall, F1-Score bar plot
-        x = np.arange(len(classes))
-        width = 0.25
-        
-        ax1.bar(x - width, precision, width, label='Precision', alpha=0.8, color='skyblue')
-        ax1.bar(x, recall, width, label='Recall', alpha=0.8, color='lightcoral')
-        ax1.bar(x + width, f1_score, width, label='F1-Score', alpha=0.8, color='lightgreen')
-        
-        ax1.set_xlabel('Classes')
-        ax1.set_ylabel('Score')
-        ax1.set_title('📊 Classification Metrics by Class', fontweight='bold')
-        ax1.set_xticks(x)
-        ax1.set_xticklabels(classes, rotation=45, ha='right')
-        ax1.legend()
-        ax1.grid(True, alpha=0.3)
-        ax1.set_ylim(0, 1.1)
-        
-        # Economic impact vs F1-score
-        economic_impacts = [ECONOMIC_IMPACT.get(cls, 0) for cls in classes]
-        scatter = ax2.scatter(economic_impacts, f1_score, s=100, alpha=0.7, c=range(len(classes)), cmap='viridis')
-        
-        for i, cls in enumerate(classes):
-            ax2.annotate(cls, (economic_impacts[i], f1_score[i]), 
-                        xytext=(5, 5), textcoords='offset points', fontsize=9)
-        
-        ax2.set_xlabel('Economic Impact Rating')
-        ax2.set_ylabel('F1-Score')
-        ax2.set_title('💰 Economic Impact vs Model Performance', fontweight='bold')
-        ax2.grid(True, alpha=0.3)
-        
-        # Support (number of samples) per class
-        support = [class_report[cls]['support'] for cls in classes]
-        bars = ax3.bar(classes, support, color='orange', alpha=0.7)
-        ax3.set_xlabel('Classes')
-        ax3.set_ylabel('Number of Test Samples')
-        ax3.set_title('📊 Test Set Distribution', fontweight='bold')
-        ax3.tick_params(axis='x', rotation=45)
-        
-        # Add value labels on bars
-        for bar in bars:
-            height = bar.get_height()
-            ax3.text(bar.get_x() + bar.get_width()/2., height + 0.5,
-                    f'{int(height)}', ha='center', va='bottom', fontweight='bold')
-        
-        # Overall metrics
-        overall_metrics = {
-            'Accuracy': class_report['accuracy'],
-            'Macro Avg Precision': class_report['macro avg']['precision'],
-            'Macro Avg Recall': class_report['macro avg']['recall'],
-            'Macro Avg F1': class_report['macro avg']['f1-score'],
-            'Weighted Avg Precision': class_report['weighted avg']['precision'],
-            'Weighted Avg Recall': class_report['weighted avg']['recall'],
-            'Weighted Avg F1': class_report['weighted avg']['f1-score']
-        }
-        
-        metrics_text = "Overall Performance Metrics:\n\n"
-        for metric, value in overall_metrics.items():
-            metrics_text += f"{metric}: {value:.4f}\n"
-        
-        ax4.text(0.1, 0.5, metrics_text, fontsize=12, verticalalignment='center',
-                bbox=dict(boxstyle="round,pad=0.5", facecolor="lightgray", alpha=0.7))
-        ax4.set_title('📈 Overall Performance', fontweight='bold')
-        ax4.axis('off')
+        # Percentages
+        sns.heatmap(cm_percent, annot=True, fmt='.1f', cmap='Reds',
+                    xticklabels=self.class_names,
+                    yticklabels=self.class_names, ax=ax2)
+        ax2.set_title('🎯 Confusion Matrix (Percentages)', fontsize=16, fontweight='bold')
+        ax2.set_xlabel('Predicted Label')
+        ax2.set_ylabel('True Label')
         
         plt.tight_layout()
         plt.show()
@@ -431,7 +641,7 @@ Classes: {len(self.class_names)}
         """
         Save trained model and training results
         """
-        print(f"\n💾 Saving model and results...")
+        print(f"\n💾 Saving Custom CNN model and results...")
         
         # Save the final model
         self.model.save(MODEL_PATHS['final_model'])
@@ -440,6 +650,7 @@ Classes: {len(self.class_names)}
         # Save training history
         if self.history:
             history_dict = {
+                'model_type': 'Custom_CNN',
                 'history': self.history.history,
                 'class_names': self.class_names,
                 'training_start_time': self.training_start_time.isoformat(),
@@ -454,37 +665,10 @@ Classes: {len(self.class_names)}
             print(f"✅ Training history saved to: {MODEL_PATHS['training_history']}")
         
         print(f"💾 All files saved successfully!")
-    
-    def load_trained_model(self, model_path=None):
-        """
-        Load a pre-trained model
-        """
-        if model_path is None:
-            if MODEL_PATHS['best_model'].exists():
-                model_path = MODEL_PATHS['best_model']
-            elif MODEL_PATHS['final_model'].exists():
-                model_path = MODEL_PATHS['final_model']
-            else:
-                raise FileNotFoundError("No trained model found!")
-        
-        print(f"📥 Loading model from: {model_path}")
-        self.model = keras.models.load_model(model_path)
-        
-        # Load class names if available
-        if MODEL_PATHS['class_names'].exists():
-            with open(MODEL_PATHS['class_names'], 'r') as f:
-                class_info = json.load(f)
-                self.class_names = [class_info['idx_to_class'][str(i)] 
-                                   for i in range(len(class_info['idx_to_class']))]
-        
-        print(f"✅ Model loaded successfully!")
-        print(f"🎯 Classes: {self.class_names}")
-        
-        return self.model
 
 # Example usage and testing
 if __name__ == "__main__":
-    print("🚀 Testing Model Training Module...")
+    print("🚀 Testing Custom CNN Model Training Module...")
     
     # Initialize model trainer
     trainer = PestClassificationModel()
@@ -492,10 +676,11 @@ if __name__ == "__main__":
     # Train the model
     try:
         history = trainer.train_model(save_model=True)
-        print(f"\n🎉 Model training completed successfully!")
+        print(f"\n🎉 Custom CNN model training completed successfully!")
         
     except Exception as e:
         print(f"❌ Error during training: {e}")
-        raise
+        import traceback
+        traceback.print_exc()
     
-    print(f"\n✅ Model training module test completed!")
+    print(f"\n✅ Custom CNN model training module test completed!")
