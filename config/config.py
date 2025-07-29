@@ -17,7 +17,7 @@ MODELS_PATH.mkdir(exist_ok=True)
 # Dataset configuration
 HARMFUL_PEST_CLASSES = [
     'beetle',
-    'catterpillar',
+    'caterpillar', 
     'earwig',
     'grasshopper',
     'moth',
