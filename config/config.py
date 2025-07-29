@@ -42,7 +42,7 @@ MODEL_CONFIG = {
     'input_shape': (224, 224, 3),
     'num_classes': len(HARMFUL_PEST_CLASSES),
     'batch_size': 32,
-    'epochs': 50,
+    'epochs': 25,
     'learning_rate': 0.001,
     'validation_split': 0.2,
     'test_split': 0.15,
