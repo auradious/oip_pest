@@ -5,3 +5,5 @@ tensorflow
 matplotlib
 torchvision
 numpy
+tqdm
+gradio
