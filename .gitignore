@@ -1,6 +1,0 @@
-#ignore environment
-.venv
-*/__pycache__/
-models/*.h5
-#ignore dataset
-dataset/

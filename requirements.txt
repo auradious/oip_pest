@@ -1,9 +1,0 @@
-pandas
-seaborn
-scikit-learn
-tensorflow
-matplotlib
-torchvision
-numpy
-tqdm
-gradio
