@@ -26,7 +26,9 @@ LANGUAGES = {
             'footer_title': '🌱 Organic Farm Pest Management AI',
             'footer_subtitle': 'Helping farmers protect crops while preserving beneficial insects',
             'footer_disclaimer': 'Always consult local agricultural experts for comprehensive pest management',
-            'language_selector': 'Language'
+            'language_selector': 'Language',
+            'identification_placeholder': '🔍 Pest identification results will appear here...',
+            'treatment_placeholder': '💡 Treatment recommendations will appear here...'
         },
         'predictions': {
             'no_image': '📸 **Please upload an image**',
@@ -87,7 +89,9 @@ The AI model needs to be trained before making predictions. Once trained, you'll
             'footer_title': '🌱 AI Quản Lý Sâu Bệnh Nông Nghiệp Hữu Cơ',
             'footer_subtitle': 'Giúp nông dân bảo vệ cây trồng đồng thời bảo tồn côn trùng có ích',
             'footer_disclaimer': 'Luôn tham khảo ý kiến chuyên gia nông nghiệp địa phương để quản lý sâu bệnh toàn diện',
-            'language_selector': 'Ngôn ngữ'
+            'language_selector': 'Ngôn ngữ',
+            'identification_placeholder': '🔍 Kết quả nhận diện sâu bệnh sẽ xuất hiện ở đây...',
+            'treatment_placeholder': '💡 Khuyến nghị điều trị sẽ xuất hiện ở đây...'
         },
         'predictions': {
             'no_image': '📸 **Vui lòng tải lên hình ảnh**',

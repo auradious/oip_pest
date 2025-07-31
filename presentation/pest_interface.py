@@ -25,29 +25,27 @@ def create_pest_management_interface():
     with gr.Blocks(
         theme=gr.themes.Soft(),
         title=GRADIO_CONFIG['title'],
-        css="""
+        css="""        /* ===== GLOBAL CONTAINER STYLES ===== */
         .gradio-container {
             max-width: 1000px !important;
             margin: auto !important;
             padding: 20px;
         }
-        .upload-container {
-            border: 2px dashed #ccc;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
-            min-height: 400px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
+        
+        /* ===== BACKGROUND CLEANUP ===== */
+        .gr-box, .gr-form, .gr-panel {
+            background: transparent !important;
         }
-        .result-container {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-            min-height: 120px;
+        
+        div[data-testid="block-container"] {
+            background: white !important;
         }
+        
+        .main > .container-fluid {
+            background: white !important;
+        }
+        
+        /* ===== LAYOUT STRUCTURE ===== */
         .language-selector {
             position: absolute;
             top: 20px;
@@ -55,9 +53,16 @@ def create_pest_management_interface():
             z-index: 1000;
             min-width: 150px;
         }
+        
         .main-content {
             margin-top: 60px;
         }
+        
+        .column-left, .column-right {
+            padding: 0 15px;
+        }
+        
+        /* ===== SECTION HEADERS ===== */
         .section-header {
             font-size: 1.2em;
             font-weight: bold;
@@ -66,19 +71,43 @@ def create_pest_management_interface():
             display: flex;
             align-items: center;
         }
+        
+        /* ===== UPLOAD AREA STYLES ===== */
+        .upload-container {
+            margin: 10px 0;
+        }
+        
+        .gr-file-upload {
+            min-height: 350px !important;
+        }
+        
+        [data-testid="image"] {
+            min-height: 350px !important;
+        }
+        
+        [data-testid="image"] .upload-text {
+            padding: 40px 20px !important;
+        }
+        
+        /* ===== BUTTON STYLES ===== */
+        .button-container {
+            margin: 20px 0;
+        }
+        
+        /* ===== RESULT CONTAINERS ===== */
+        .result-card-wrapper {
+            margin: 15px 0;
+        }
+        
+        /* ===== CONTENT SECTIONS ===== */
         .tips-section {
             margin-top: 20px;
         }
+        
         .footer-section {
             margin-top: 30px;
             padding-top: 20px;
             border-top: 1px solid #eee;
-        }
-        .column-left, .column-right {
-            padding: 0 15px;
-        }
-        .button-container {
-            margin: 20px 0;
         }
         """
     ) as interface:
@@ -139,19 +168,23 @@ def create_pest_management_interface():
                         elem_classes="section-header"
                     )
                     
-                    identification_output = gr.Textbox(
-                        label=LANGUAGES[DEFAULT_LANGUAGE]['ui']['identification_label'],
-                        lines=4,
-                        interactive=False,
-                        elem_classes="result-container"
-                    )
+                    # Pest Identification Card
+                    with gr.Column(elem_classes="result-card-wrapper"):
+                        identification_output = gr.Textbox(
+                            label=LANGUAGES[DEFAULT_LANGUAGE]['ui']['identification_label'],
+                            lines=4,
+                            interactive=False,
+                            placeholder=LANGUAGES[DEFAULT_LANGUAGE]['ui']['identification_placeholder']
+                        )
                     
-                    treatment_output = gr.Textbox(
-                        label=LANGUAGES[DEFAULT_LANGUAGE]['ui']['treatment_label'],
-                        lines=10,
-                        interactive=False,
-                        elem_classes="result-container"
-                    )
+                    # Treatment Recommendations Card
+                    with gr.Column(elem_classes="result-card-wrapper"):
+                        treatment_output = gr.Textbox(
+                            label=LANGUAGES[DEFAULT_LANGUAGE]['ui']['treatment_label'],
+                            lines=10,
+                            interactive=False,
+                            placeholder=LANGUAGES[DEFAULT_LANGUAGE]['ui']['treatment_placeholder']
+                        )
         
             # Footer
             with gr.Column(elem_classes="footer-section"):
@@ -176,8 +209,8 @@ def create_pest_management_interface():
                 gr.update(label=lang_data['ui']['tips_title']),  # tips_accordion
                 lang_data['ui']['tips_content'],  # tips_content
                 f"### {lang_data['ui']['results_section']}",  # results_section_md
-                gr.update(label=lang_data['ui']['identification_label']),  # identification_output
-                gr.update(label=lang_data['ui']['treatment_label']),  # treatment_output
+                gr.update(label=lang_data['ui']['identification_label'], placeholder=lang_data['ui']['identification_placeholder']),  # identification_output
+                gr.update(label=lang_data['ui']['treatment_label'], placeholder=lang_data['ui']['treatment_placeholder']),  # treatment_output
                 f"""
                 <div style='text-align: center; color: #666; font-size: 14px; padding: 20px;'>
                 <p><strong>{lang_data['ui']['footer_title']}</strong></p>
