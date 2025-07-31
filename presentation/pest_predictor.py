@@ -15,6 +15,7 @@ sys.path.append(str(project_root))
 
 from config.config import *
 from config.languages import LANGUAGES, DEFAULT_LANGUAGE
+from presentation.ollama_service import OllamaService
 
 class PestPredictor:
     """
@@ -24,6 +25,7 @@ class PestPredictor:
     def __init__(self):
         self.model = None
         self.class_names = {}
+        self.ollama_service = OllamaService()
         self.load_model_and_classes()
         
     def load_model_and_classes(self):
@@ -89,14 +91,37 @@ class PestPredictor:
         
         return img_array
     
-    def get_treatment_recommendation(self, pest_class, language='en'):
+    def get_treatment_recommendation(self, pest_class, confidence=0.0, language='en'):
         """
         Get organic treatment recommendations for identified pest
+        Uses Ollama AI as primary source, falls back to static recommendations
+        """
+        # Check if pest is beneficial (no treatment needed)
+        if pest_class not in HARMFUL_PEST_CLASSES:
+            lang_data = LANGUAGES.get(language, LANGUAGES[DEFAULT_LANGUAGE])
+            return lang_data['predictions']['no_treatment']
+        
+        # Try Ollama first for AI-powered recommendations
+        try:
+            if self.ollama_service.is_available:
+                print("🤖 Generating AI-powered treatment recommendation...")
+                ai_recommendation = self.ollama_service.generate_treatment_recommendation(
+                    pest_class, confidence
+                )
+                return ai_recommendation
+            else:
+                print("⚠️ Ollama unavailable, using static recommendations...")
+                return self._get_static_recommendation(pest_class, language)
+        except Exception as e:
+            print(f"❌ Error with Ollama service: {e}")
+            print("🔄 Falling back to static recommendations...")
+            return self._get_static_recommendation(pest_class, language)
+    
+    def _get_static_recommendation(self, pest_class, language='en'):
+        """
+        Get static treatment recommendations (fallback when Ollama is unavailable)
         """
         lang_data = LANGUAGES.get(language, LANGUAGES[DEFAULT_LANGUAGE])
-        
-        if pest_class not in HARMFUL_PEST_CLASSES:
-            return lang_data['predictions']['no_treatment']
         
         # Get pest characteristics
         economic_impact = ECONOMIC_IMPACT.get(pest_class, 3)
@@ -125,13 +150,16 @@ class PestPredictor:
         else:
             priority_text = lang_data['predictions']['monitor_situation']
         
-        recommendation = f"""**{urgency_emojis[urgency]} {urgency_level} {urgency}**
-**{impact_emojis[economic_impact]} {economic_impact_text} {economic_impact}/5**
+        recommendation = f"""**📋 Static Treatment Plan**
+{urgency_emojis[urgency]} **{urgency_level} {urgency}**
+{impact_emojis[economic_impact]} **{economic_impact_text} {economic_impact}/5**
 
 {treatment}
 
 **{action_priority}**
-{priority_text}"""
+{priority_text}
+
+⚠️ **Note:** For enhanced AI-powered recommendations, ensure Ollama is running with the configured model."""
         
         return recommendation
     
@@ -164,12 +192,12 @@ class PestPredictor:
             # Format prediction result
             confidence_percent = confidence * 100
             
-            if confidence < 0.3:
+            if confidence < 0.15:
                 result = f"{lang_data['predictions']['uncertain']}\n\n{lang_data['predictions']['most_likely']} {predicted_class.title()}\n{lang_data['predictions']['confidence']} {confidence_percent:.1f}%\n\n{lang_data['predictions']['uncertain_desc']}"
                 recommendation = lang_data['predictions']['recommendation_unclear']
             else:
                 result = f"{lang_data['predictions']['identified']}\n\n{lang_data['predictions']['species']} {predicted_class.title()}\n{lang_data['predictions']['confidence']} {confidence_percent:.1f}%"
-                recommendation = self.get_treatment_recommendation(predicted_class, language)
+                recommendation = self.get_treatment_recommendation(predicted_class, confidence, language)
             
             return result, recommendation
             

@@ -107,15 +107,38 @@ TREATMENT_URGENCY = {
     'weevil': 'High'         # Can destroy stored crops and seeds
 }
 
-# Gradio interface configuration
+# Gradio Interface Configuration
 GRADIO_CONFIG = {
-    'title': "🌱 Organic Farm Pest Management AI",
-    'description': "Upload an image of a pest to get instant identification and organic treatment recommendations",
-    'theme': "soft",
     'server_port': 7860,
     'server_name': "0.0.0.0",
     'share': False,  # Set to True for public sharing
+    'title': "🌱 Organic Farm Pest Management AI",
+    'description': """
+    **Advanced AI-powered pest identification and organic treatment recommendations**
+    
+    Upload a clear photo of the pest you've found in your crops. Our AI will:
+    • Identify the pest species with confidence scoring
+    • Provide organic treatment recommendations
+    • Suggest prevention strategies
+    • Assess economic impact and treatment urgency
+    
+    *Supports identification of 9 common agricultural pests*
+    """,
+    'theme': "soft",
     'debug': True
+}
+
+# Ollama AI Configuration
+OLLAMA_CONFIG = {
+    'default_model': 'gemma3:latest',
+    'generation_params': {
+        'temperature': 0.7,
+        'top_p': 0.9,
+        'top_k': 40,
+        'num_predict': 1000,
+        'repeat_penalty': 1.1
+    },
+    'timeout': 30
 }
 
 # Image processing configuration
