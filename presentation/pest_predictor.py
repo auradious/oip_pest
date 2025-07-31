@@ -14,6 +14,7 @@ project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
 from config.config import *
+from config.languages import LANGUAGES, DEFAULT_LANGUAGE
 
 class PestPredictor:
     """
@@ -88,61 +89,65 @@ class PestPredictor:
         
         return img_array
     
-    def get_treatment_recommendation(self, pest_class):
+    def get_treatment_recommendation(self, pest_class, language='en'):
         """
         Get organic treatment recommendations for identified pest
         """
+        lang_data = LANGUAGES.get(language, LANGUAGES[DEFAULT_LANGUAGE])
+        
         if pest_class not in HARMFUL_PEST_CLASSES:
-            return "✅ **No treatment needed** - This appears to be a beneficial insect!"
+            return lang_data['predictions']['no_treatment']
         
         # Get pest characteristics
         economic_impact = ECONOMIC_IMPACT.get(pest_class, 3)
         urgency = TREATMENT_URGENCY.get(pest_class, 'Medium')
         
-        # Base organic treatments by pest type
-        treatments = {
-            'beetle': "🌿 **Organic Treatments:**\\n• Neem oil spray\\n• Beneficial nematodes\\n• Row covers\\n• Hand picking\\n• Diatomaceous earth",
-            'catterpillar': "🌿 **Organic Treatments:**\\n• Bacillus thuringiensis (Bt)\\n• Row covers\\n• Hand picking\\n• Beneficial wasps\\n• Companion planting with herbs",
-            'earwig': "🌿 **Organic Treatments:**\\n• Beer traps\\n• Diatomaceous earth\\n• Remove garden debris\\n• Beneficial predators\\n• Copper strips",
-            'grasshopper': "🌿 **Organic Treatments:**\\n• Row covers\\n• Beneficial birds habitat\\n• Neem oil\\n• Kaolin clay spray\\n• Timing of plantings",
-            'moth': "🌿 **Organic Treatments:**\\n• Pheromone traps\\n• Bacillus thuringiensis (Bt)\\n• Row covers during flight season\\n• Beneficial parasitic wasps\\n• Light traps",
-            'slug': "🌿 **Organic Treatments:**\\n• Beer traps\\n• Copper barriers\\n• Diatomaceous earth\\n• Iron phosphate baits\\n• Remove hiding places",
-            'snail': "🌿 **Organic Treatments:**\\n• Beer traps\\n• Copper barriers\\n• Diatomaceous earth\\n• Hand picking\\n• Crushed eggshells",
-            'wasp': "🌿 **Organic Treatments:**\\n• Usually beneficial! Only treat if problematic\\n• Remove food sources\\n• Seal nest entrances\\n• Professional removal if needed",
-            'weevil': "🌿 **Organic Treatments:**\\n• Beneficial nematodes\\n• Diatomaceous earth\\n• Remove infected plants\\n• Crop rotation\\n• Sticky traps"
-        }
+        # Get treatment text for the pest
+        treatment_text = lang_data['treatments'].get(pest_class, '')
+        organic_treatments = lang_data['treatments']['organic_treatments']
         
-        treatment = treatments.get(pest_class, "Consult local agricultural extension for specific recommendations.")
+        treatment = f"{organic_treatments}\n{treatment_text}"
         
         # Add urgency and impact information
         impact_emojis = {1: "💚", 2: "💛", 3: "🧡", 4: "❤️", 5: "💔"}
         urgency_emojis = {"Low": "🟢", "Medium": "🟡", "High": "🔴"}
         
-        recommendation = f"""**{urgency_emojis[urgency]} Urgency Level: {urgency}**
-**{impact_emojis[economic_impact]} Economic Impact: {economic_impact}/5**
+        # Get localized urgency text
+        urgency_level = lang_data['predictions']['urgency_level']
+        economic_impact_text = lang_data['predictions']['economic_impact']
+        action_priority = lang_data['predictions']['action_priority']
+        
+        # Get action priority text based on urgency
+        if urgency == 'High':
+            priority_text = lang_data['predictions']['immediate_action']
+        elif urgency == 'Medium':
+            priority_text = lang_data['predictions']['action_recommended']
+        else:
+            priority_text = lang_data['predictions']['monitor_situation']
+        
+        recommendation = f"""**{urgency_emojis[urgency]} {urgency_level} {urgency}**
+**{impact_emojis[economic_impact]} {economic_impact_text} {economic_impact}/5**
 
 {treatment}
 
-**🚨 Action Priority:**
-{'🔥 **IMMEDIATE ACTION REQUIRED**' if urgency == 'High' else 
- '⚡ **ACTION RECOMMENDED**' if urgency == 'Medium' else 
- '📝 **MONITOR SITUATION**'}"""
+**{action_priority}**
+{priority_text}"""
         
         return recommendation
     
-    def predict_pest(self, image):
+    def predict_pest(self, image, language='en'):
         """
         Main prediction function called by the interface
         """
+        lang_data = LANGUAGES.get(language, LANGUAGES[DEFAULT_LANGUAGE])
+        
         if image is None:
-            return "📸 **Please upload an image**", "Upload a clear photo of the pest for identification."
+            return lang_data['predictions']['no_image'], lang_data['predictions']['no_image_desc']
         
         if self.model is None:
-            return ("❌ **Model not loaded**\\n\\nPlease train the model first using:\\n"
-                   "1. `python src/data_preprocessing.py`\\n"
-                   "2. `python src/model_training.py`"), ("**Demo Mode**\\n\\n"
-                   "The AI model needs to be trained before making predictions. "
-                   "Once trained, you'll get real pest identification and treatment recommendations.")
+            return (f"{lang_data['predictions']['model_not_loaded']}\n\nPlease train the model first using:\n"
+                   "1. `python src/data_preprocessing.py`\n"
+                   "2. `python src/model_training.py`"), lang_data['predictions']['model_not_loaded_desc']
         
         try:
             # Preprocess image
@@ -160,13 +165,13 @@ class PestPredictor:
             confidence_percent = confidence * 100
             
             if confidence < 0.3:
-                result = f"🤔 **Uncertain Identification**\\n\\nMost likely: {predicted_class.title()}\\nConfidence: {confidence_percent:.1f}%\\n\\n⚠️ Low confidence - consider taking a clearer photo"
-                recommendation = "**Recommendation:** Take a clearer, closer photo in good lighting for better identification."
+                result = f"{lang_data['predictions']['uncertain']}\n\n{lang_data['predictions']['most_likely']} {predicted_class.title()}\n{lang_data['predictions']['confidence']} {confidence_percent:.1f}%\n\n{lang_data['predictions']['uncertain_desc']}"
+                recommendation = lang_data['predictions']['recommendation_unclear']
             else:
-                result = f"🔍 **Pest Identified**\\n\\n**Species:** {predicted_class.title()}\\n**Confidence:** {confidence_percent:.1f}%"
-                recommendation = self.get_treatment_recommendation(predicted_class)
+                result = f"{lang_data['predictions']['identified']}\n\n{lang_data['predictions']['species']} {predicted_class.title()}\n{lang_data['predictions']['confidence']} {confidence_percent:.1f}%"
+                recommendation = self.get_treatment_recommendation(predicted_class, language)
             
             return result, recommendation
             
         except Exception as e:
-            return f"❌ **Error during prediction:** {str(e)}", "Please try again with a different image."
+            return f"{lang_data['predictions']['error']} {str(e)}", lang_data['predictions']['error_desc']
