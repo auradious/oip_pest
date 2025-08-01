@@ -50,18 +50,30 @@ MODEL_CONFIG = {
 }
 
 # Data augmentation parameters
+# AUGMENTATION_CONFIG = {
+#     'rotation_range': 20,
+#     'width_shift_range': 0.2,
+#     'height_shift_range': 0.2,
+#     'shear_range': 0.2,
+#     'zoom_range': 0.2,
+#     'horizontal_flip': True,
+#     'brightness_range': [0.8, 1.2],
+#     'fill_mode': 'nearest'
+# }
 AUGMENTATION_CONFIG = {
     'rotation_range': 20,
-    'width_shift_range': 0.2,
-    'height_shift_range': 0.2,
-    'shear_range': 0.2,
+    'width_shift_range': 0.15,
+    'height_shift_range': 0.15,
+    'shear_range': 0.1,
     'zoom_range': 0.2,
     'horizontal_flip': True,
+    'vertical_flip': True,  # NEW
     'brightness_range': [0.8, 1.2],
     'fill_mode': 'nearest'
 }
 
-# Training configuration
+
+# Training configurationx
 TRAINING_CONFIG = {
     'early_stopping_patience': 10,
     'reduce_lr_patience': 5,
