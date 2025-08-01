@@ -130,7 +130,7 @@ GRADIO_CONFIG = {
 
 # Ollama AI Configuration
 OLLAMA_CONFIG = {
-    'default_model': 'gemma3:latest',
+    'default_model': 'gemma3n:latest',
     'generation_params': {
         'temperature': 0.7,
         'top_p': 0.9,

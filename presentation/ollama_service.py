@@ -47,15 +47,24 @@ class OllamaService:
             models_response = self.client.list()
             
             # Handle different response structures
-            if isinstance(models_response, dict) and 'models' in models_response:
+            if hasattr(models_response, 'models'):
+                # Handle response object with models attribute
+                models_list = models_response.models
+            elif isinstance(models_response, dict) and 'models' in models_response:
+                # Handle dictionary response
                 models_list = models_response['models']
             else:
+                # Handle direct list response
                 models_list = models_response
             
             # Extract model names safely
             available_models = []
             for model in models_list:
-                if isinstance(model, dict):
+                if hasattr(model, 'model'):
+                    # Handle newer Ollama API with model objects
+                    model_name = model.model
+                    available_models.append(model_name)
+                elif isinstance(model, dict):
                     # Try different possible keys for model name
                     model_name = model.get('name') or model.get('model') or model.get('id', 'unknown')
                     available_models.append(model_name)
@@ -70,8 +79,9 @@ class OllamaService:
                 return True
             else:
                 logger.warning(f"⚠️ Model '{self.model_name}' not found. Available models: {available_models}")
-                # Try to pull the model
-                return self.pull_model()
+                logger.info(f"💡 To install the model manually, run: ollama pull {self.model_name}")
+                self.is_available = False
+                return False
                 
         except Exception as e:
             logger.error(f"❌ Ollama not available: {str(e)}")
@@ -106,15 +116,24 @@ class OllamaService:
             models_response = self.client.list()
             
             # Handle different response structures
-            if isinstance(models_response, dict) and 'models' in models_response:
+            if hasattr(models_response, 'models'):
+                # Handle response object with models attribute
+                models_list = models_response.models
+            elif isinstance(models_response, dict) and 'models' in models_response:
+                # Handle dictionary response
                 models_list = models_response['models']
             else:
+                # Handle direct list response
                 models_list = models_response
             
             # Extract model names
             available_models = []
             for model in models_list:
-                if isinstance(model, dict):
+                if hasattr(model, 'model'):
+                    # Handle newer Ollama API with model objects
+                    model_name = model.model
+                    available_models.append(model_name)
+                elif isinstance(model, dict):
                     model_name = model.get('name') or model.get('model') or model.get('id', 'unknown')
                     available_models.append(model_name)
                 else:
