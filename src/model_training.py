@@ -78,21 +78,21 @@ class FixedPestCNN:
 
     def create_working_model(self, num_classes):
         """
-        EfficientNetB0 backbone with custom head.
+        EfficientNetB0 backbone with custom head (corrected).
         """
         print(f"\n🏗️  Creating EfficientNetB0 model...")
 
-        inputs = layers.Input(shape=(224, 224, 3))  # Keep existing input shape
-        x = effnet_preprocess(inputs)
+        # Input image size (224x224x3)
+        inputs = layers.Input(shape=(224, 224, 3))
 
-        # EfficientNetB0 as backbone
-        backbone = EfficientNetB0(include_top=False, weights='imagenet', input_tensor=x)
-        backbone.trainable = True  # train entire model end-to-end
+        # EfficientNetB0 expects unprocessed inputs here
+        backbone = EfficientNetB0(include_top=False, weights='imagenet', input_tensor=inputs)
+        backbone.trainable = True  # You can set this to False if only training the head initially
 
         y = backbone.output
         y = layers.GlobalAveragePooling2D()(y)
 
-        # Dense head
+        # Dense classification head
         y = layers.Dense(256, activation='relu')(y)
         y = layers.Dropout(0.4)(y)
         y = layers.Dense(128, activation='relu')(y)
@@ -108,13 +108,10 @@ class FixedPestCNN:
 
         print(f"✅ EfficientNetB0 model ready. Parameters: {model.count_params():,}")
         return model
-
-    
-
     
     def run_fixed_training(self):
         """
-        Run training with transfer learning + fine-tuning flow
+        Run training with EfficientNetB0 + transfer learning + fine-tuning
         """
         print(f"\n🚀 STARTING FIXED TRAINING...")
 
@@ -122,23 +119,15 @@ class FixedPestCNN:
         print("📁 Loading data...")
         class_counts = self.preprocessor.explore_dataset()
         X, y, image_paths = self.preprocessor.load_and_preprocess_images()
-
-        # If using EfficientNet backbone, skip manual Z-score (it has its own preprocessing)
-        print("\n🔧 Applying PROPER normalization (only for non-transfer path)...")
-        # Here we leave the call for legacy path; if using hybrid transfer model, effnet_preprocess will handle scaling.
-        X = self.apply_proper_normalization(X)
         y = np.array(y, dtype=np.int32)
+
+        # Apply EfficientNet preprocessing (instead of Z-score)
+        print("\n🔧 Applying EfficientNet preprocessing...")
+        from tensorflow.keras.applications.efficientnet import preprocess_input as effnet_preprocess
+        X = effnet_preprocess(np.array(X, dtype=np.float32))  # Expected range [-1, 1]
 
         # Split data
         (X_train, X_val, X_test), (y_train, y_val, y_test), _ = self.preprocessor.split_dataset(X, y, image_paths)
-
-        # Convert to numpy arrays
-        X_train = np.array(X_train)
-        X_val = np.array(X_val)
-        X_test = np.array(X_test)
-        y_train = np.array(y_train)
-        y_val = np.array(y_val)
-        y_test = np.array(y_test)
 
         print(f"\n📊 Dataset splits:")
         print(f"  Training: {len(X_train)} samples")
@@ -164,7 +153,7 @@ class FixedPestCNN:
         print(f"\n📋 Model Architecture:")
         self.model.summary()
 
-        # Callbacks (you can add ModelCheckpoint if desired)
+        # Callbacks
         callbacks = [
             EarlyStopping(
                 monitor='val_accuracy',
@@ -181,7 +170,7 @@ class FixedPestCNN:
             )
         ]
 
-        # -------- Stage 1: train head with frozen backbone --------
+        # -------- Stage 1: train head (backbone frozen) --------
         print(f"\n🎯 Stage 1: Training head (backbone frozen)")
         self.history = self.model.fit(
             X_train, y_train,
@@ -193,12 +182,13 @@ class FixedPestCNN:
         )
 
         # -------- Stage 2: fine-tune top of backbone --------
-        if hasattr(self, 'backbone'):
+        if hasattr(self.model, 'layers'):
             print(f"\n🎯 Stage 2: Fine-tuning backbone + head")
-            # Unfreeze last few layers of backbone
-            self.backbone.trainable = True
-            for layer in self.backbone.layers[:-30]:
-                layer.trainable = False  # keep earlier layers frozen
+
+            # Unfreeze last 30 layers
+            for layer in self.model.layers[-30:]:
+                if not isinstance(layer, layers.BatchNormalization):
+                    layer.trainable = True
 
             # Recompile with lower LR
             self.model.compile(
@@ -223,8 +213,7 @@ class FixedPestCNN:
         test_loss, test_accuracy = self.model.evaluate(X_test, y_test, verbose=0)
 
         print(f"🎯 FINAL TEST ACCURACY: {test_accuracy:.4f} ({test_accuracy*100:.2f}%)")
-
-        improvement = test_accuracy / 0.11  # baseline comparison
+        improvement = test_accuracy / 0.11
         print(f"🚀 IMPROVEMENT: {improvement:.1f}x better than 11% baseline")
 
         if test_accuracy > 0.50:
@@ -238,42 +227,37 @@ class FixedPestCNN:
 
         # Save the trained model
         self.save_model()
-        
+
         # Detailed results
         self.show_detailed_results(X_test, y_test)
 
         return test_accuracy
+
     
     def save_model(self):
         """
-        Save the trained model to the models directory in .h5 format
+        Save the trained model in .keras format
         """
         if self.model is None:
             print("❌ No model to save!")
             return
-            
-        # Create models directory if it doesn't exist
+
         models_dir = Path(__file__).parent.parent / "models"
         models_dir.mkdir(exist_ok=True)
-        
-        # Save model in .h5 format
-        model_path = models_dir / "best_pest_classifier.h5"
-        
+
+        model_path = models_dir / "best_pest_classifier.keras"
+
         try:
             print(f"\n💾 Saving model to {model_path}...")
-            self.model.save(str(model_path), save_format='h5')
+            self.model.save(model_path)  # TensorFlow will use .keras format
             print(f"✅ Model saved successfully!")
-            
-            # Print model info
-            if model_path.exists():
-                model_size = model_path.stat().st_size / (1024 * 1024)  # MB
-                print(f"📊 Model file size: {model_size:.2f} MB")
-                print(f"📁 Model location: {model_path}")
-            
+            print(f"📁 Model location: {model_path}")
+            print(f"📊 Model file size: {model_path.stat().st_size / (1024 * 1024):.2f} MB")
         except Exception as e:
             print(f"❌ Error saving model: {e}")
             import traceback
             traceback.print_exc()
+
     
     def show_detailed_results(self, X_test, y_test):
         """

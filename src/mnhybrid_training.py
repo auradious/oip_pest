@@ -9,6 +9,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers, models, optimizers
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn.metrics import classification_report, confusion_matrix
 import sys
 from pathlib import Path
@@ -177,6 +178,54 @@ class HybridMobileNetCNN:
         
         return model
     
+    def compute_class_weights(self, y_train):
+        """
+        Compute class weights to handle imbalanced dataset
+        """
+        from sklearn.utils.class_weight import compute_class_weight
+        
+        unique_classes = np.unique(y_train)
+        class_weights = compute_class_weight(
+            'balanced',
+            classes=unique_classes,
+            y=y_train
+        )
+        
+        class_weight_dict = dict(zip(unique_classes, class_weights))
+        
+        print(f"\n⚖️  Class weights for imbalanced dataset:")
+        for class_idx, weight in class_weight_dict.items():
+            class_name = self.class_names[class_idx] if class_idx < len(self.class_names) else f"Class_{class_idx}"
+            print(f"  {class_name}: {weight:.3f}")
+        
+        return class_weight_dict
+
+    def create_data_generators(self, X_train, y_train, X_val, y_val):
+        """
+        Create data generators with augmentation for training
+        """
+        # Data augmentation for training (helps with imbalanced classes)
+        train_datagen = ImageDataGenerator(
+            rotation_range=20,
+            width_shift_range=0.2,
+            height_shift_range=0.2,
+            horizontal_flip=True,
+            zoom_range=0.2,
+            shear_range=0.1,
+            fill_mode='nearest'
+        )
+        
+        # No augmentation for validation
+        val_datagen = ImageDataGenerator()
+        
+        # Create generators
+        train_generator = train_datagen.flow(X_train, y_train, batch_size=32, shuffle=True)
+        val_generator = val_datagen.flow(X_val, y_val, batch_size=32, shuffle=False)
+        
+        print(f"🔄 Data augmentation enabled for training to handle class imbalance")
+        
+        return train_generator, val_generator
+
     def run_hybrid_training(self):
         """
         Run two-stage hybrid training: 
@@ -215,11 +264,26 @@ class HybridMobileNetCNN:
         self.class_names = [self.preprocessor.idx_to_class[i] for i in range(num_classes)]
 
         print(f"\n🎯 Classes ({num_classes}):")
+        print(f"🔍 Class names loaded: {self.class_names}")
+        print(f"🔍 Expected harmful pest classes: {HARMFUL_PEST_CLASSES}")
+        
+        # Validate that we have the expected classes
+        if num_classes != len(HARMFUL_PEST_CLASSES):
+            print(f"⚠️  WARNING: Found {num_classes} classes but config expects {len(HARMFUL_PEST_CLASSES)}!")
+            print(f"🔍 Unique labels in y: {np.unique(y)}")
+        
         for i, name in enumerate(self.class_names):
             train_count = np.sum(y_train == i)
             val_count = np.sum(y_val == i)
             test_count = np.sum(y_test == i)
-            print(f"  {name}: {train_count} train, {val_count} val, {test_count} test")
+            total_count = train_count + val_count + test_count
+            print(f"  {name}: {train_count} train, {val_count} val, {test_count} test (total: {total_count})")
+
+        # Compute class weights for imbalanced dataset
+        class_weights = self.compute_class_weights(y_train)
+
+        # Create data generators with augmentation
+        train_generator, val_generator = self.create_data_generators(X_train, y_train, X_val, y_val)
 
         # Create hybrid model
         print(f"\n🏗️ Creating hybrid model...")
@@ -258,10 +322,10 @@ class HybridMobileNetCNN:
         print(f"🔒 MobileNet frozen, training {sum([w.shape.num_elements() for w in self.model.trainable_weights]):,} parameters")
         
         stage1_history = self.model.fit(
-            X_train, y_train,
-            batch_size=32,
-            epochs=10,
-            validation_data=(X_val, y_val),
+            train_generator,  # Use generator instead of arrays
+            epochs=15,  # Increased from 10
+            validation_data=val_generator,  # Use generator for validation too
+            class_weight=class_weights,  # Add class weights
             callbacks=callbacks,
             verbose=1
         )
@@ -289,10 +353,10 @@ class HybridMobileNetCNN:
         print(f"🔧 Fine-tuning {trainable_params:,} parameters")
 
         stage2_history = self.model.fit(
-            X_train, y_train,
-            batch_size=32,
-            epochs=10,
-            validation_data=(X_val, y_val),
+            train_generator,  # Use generator for stage 2 too
+            epochs=15,  # Increased from 10
+            validation_data=val_generator,
+            class_weight=class_weights,  # Add class weights for stage 2 too
             callbacks=callbacks,
             verbose=1
         )
@@ -310,6 +374,23 @@ class HybridMobileNetCNN:
         y_pred_proba = self.model.predict(X_test, verbose=0)
         top3_accuracy = self.calculate_top3_accuracy(y_test, y_pred_proba)
         print(f"🎯 TOP-3 ACCURACY: {top3_accuracy:.4f} ({top3_accuracy*100:.2f}%)")
+
+        # Debug prediction distribution
+        y_pred = np.argmax(y_pred_proba, axis=1)
+        print(f"\n🔍 PREDICTION DISTRIBUTION DEBUG:")
+        unique_pred, pred_counts = np.unique(y_pred, return_counts=True)
+        for class_idx, count in zip(unique_pred, pred_counts):
+            class_name = self.class_names[class_idx] if class_idx < len(self.class_names) else f"Class_{class_idx}"
+            percentage = (count / len(y_pred)) * 100
+            print(f"  {class_name}: {count} predictions ({percentage:.1f}%)")
+        
+        # Check for bias toward specific classes
+        if len(pred_counts) > 0:
+            max_pred_idx = unique_pred[np.argmax(pred_counts)]
+            max_pred_class = self.class_names[max_pred_idx]
+            max_percentage = (np.max(pred_counts) / len(y_pred)) * 100
+            if max_percentage > 50:
+                print(f"⚠️  WARNING: Model is heavily biased toward '{max_pred_class}' ({max_percentage:.1f}% of predictions)")
 
         # Compare with previous results
         previous_best = 0.5751  # Your previous best
@@ -536,7 +617,7 @@ class HybridMobileNetCNN:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
         
         epochs = range(1, len(self.history.history['accuracy']) + 1)
-        stage1_end = 10  # Where stage 1 ended
+        stage1_end = 15  # Where stage 1 ended (updated to 15)
         
         # Accuracy
         ax1.plot(epochs, self.history.history['accuracy'], 'b-', label='Training', linewidth=2)
@@ -550,8 +631,8 @@ class HybridMobileNetCNN:
         ax1.axhline(y=0.70, color='green', linestyle='--', alpha=0.7, label='Target')
         
         # Add stage labels
-        ax1.text(15, 0.2, 'Stage 1:\nTrain Custom\nLayers', ha='center', bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue"))
-        ax1.text(55, 0.2, 'Stage 2:\nFine-tune\nHybrid Model', ha='center', bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgreen"))
+        ax1.text(7, 0.2, 'Stage 1:\nTrain Custom\nLayers', ha='center', bbox=dict(boxstyle="round,pad=0.3", facecolor="lightblue"))
+        ax1.text(22, 0.2, 'Stage 2:\nFine-tune\nHybrid Model', ha='center', bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgreen"))
         
         # Loss
         ax2.plot(epochs, self.history.history['loss'], 'b-', label='Training', linewidth=2)
@@ -587,7 +668,7 @@ if __name__ == "__main__":
     try:
         print("TensorFlow version:", tf.__version__)
         print("Is GPU available:", tf.config.list_physical_devices('GPU'))
-
+    
         final_accuracy = trainer.run_hybrid_training()
         
         print(f"\n🎉 HYBRID TRAINING COMPLETED!")

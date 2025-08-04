@@ -96,6 +96,7 @@ class PestPredictor:
     def preprocess_image(self, image):
         """
         Preprocess uploaded image for model prediction
+        Must match the preprocessing used during training!
         """
         if image is None:
             return None
@@ -108,42 +109,23 @@ class PestPredictor:
                 except Exception as e:
                     raise ValueError(f"Invalid image format: {str(e)}")
             
-            # Resize to model input size
-            target_size = IMAGE_CONFIG['target_size']
+            # Resize to model input size (224, 224 for MobileNet)
+            target_size = (224, 224)  # MobileNet standard size
             image = image.resize(target_size)
             
             # Convert to RGB if needed
             if image.mode != 'RGB':
                 image = image.convert('RGB')
             
-            # Convert to numpy array and normalize
-            img_array = np.array(image)
+            # Convert to numpy array - IMPORTANT: Keep in [0,255] range for MobileNet!
+            img_array = np.array(image, dtype=np.float32)
             img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-            img_array = img_array.astype('float32') / 255.0  # Normalize
             
-            return img_array
-        except Exception as e:
-            raise ValueError(f"Error preprocessing image: {str(e)}")
-        try:
-            # Convert to PIL Image if needed
-            if not isinstance(image, Image.Image):
-                try:
-                    image = Image.fromarray(image)
-                except Exception as e:
-                    raise ValueError(f"Invalid image format: {str(e)}")
+            # MobileNet preprocessing will be handled by the model internally
+            # DO NOT normalize to [0,1] here - that's done by mobilenet_preprocess in the model
             
-            # Resize to model input size
-            target_size = IMAGE_CONFIG['target_size']
-            image = image.resize(target_size)
-            
-            # Convert to RGB if needed
-            if image.mode != 'RGB':
-                image = image.convert('RGB')
-            
-            # Convert to numpy array and normalize
-            img_array = np.array(image)
-            img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-            img_array = img_array.astype('float32') / 255.0  # Normalize
+            print(f"🔍 Preprocessed image shape: {img_array.shape}")
+            print(f"🔍 Image value range: [{img_array.min():.1f}, {img_array.max():.1f}]")
             
             return img_array
         except Exception as e:
@@ -255,8 +237,17 @@ class PestPredictor:
             predicted_class_idx = np.argmax(predictions[0])
             confidence = float(predictions[0][predicted_class_idx])
             
+            # Debug prediction values
+            print(f"🔍 Raw predictions: {predictions[0]}")
+            print(f"🔍 Predicted class index: {predicted_class_idx}")
+            print(f"🔍 All class probabilities:")
+            for i, prob in enumerate(predictions[0]):
+                class_name = self.class_names['idx_to_class'].get(str(i), f'Class_{i}')
+                print(f"   {class_name}: {prob:.4f} ({prob*100:.2f}%)")
+            
             # Get class name
             predicted_class = self.class_names['idx_to_class'].get(str(predicted_class_idx), 'Unknown')
+            print(f"🎯 Final prediction: {predicted_class} with {confidence*100:.2f}% confidence")
             
             # Format prediction result
             confidence_percent = confidence * 100

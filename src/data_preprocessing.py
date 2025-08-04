@@ -54,10 +54,14 @@ class PestDataPreprocessor:
         available_classes = [d.name for d in self.dataset_path.iterdir() if d.is_dir()]
         print(f"📁 Available classes in dataset: {available_classes}")
         
+        # Filter to only harmful pest classes (exclude beneficial insects)
+        filtered_classes = [cls for cls in available_classes if cls in self.harmful_classes]
+        print(f"🎯 Filtered to harmful pest classes: {filtered_classes}")
+        
         # Count images in each harmful pest class
         total_images = 0
         
-        for class_name in self.harmful_classes:
+        for class_name in filtered_classes:  # Only process harmful pest classes
             class_path = self.dataset_path / class_name
             
             if class_path.exists():
@@ -253,13 +257,14 @@ class PestDataPreprocessor:
                     img = load_img(img_path, target_size=self.target_size)
                     img_array = img_to_array(img)
                     img_array = img_array / 255.0  # Normalize to [0,1]
-                    
+
                     images.append(img_array)
                     labels.append(class_idx)
                     image_paths.append(str(img_path))
-                    
+
                 except Exception as e:
                     print(f"❌ Error loading {img_path}: {e}")
+
         
         # Convert to numpy arrays
         X = np.array(images)
@@ -269,6 +274,18 @@ class PestDataPreprocessor:
         print(f"📊 Data shape: {X.shape}")
         print(f"🏷️  Labels shape: {y.shape}")
         print(f"🎯 Number of classes: {len(valid_classes)}")
+        
+        # Validate label range
+        unique_labels = np.unique(y)
+        print(f"🔍 Unique labels found: {unique_labels}")
+        print(f"🔍 Expected labels range: [0, {len(valid_classes)-1}]")
+        
+        if len(unique_labels) != len(valid_classes):
+            print(f"⚠️  WARNING: Found {len(unique_labels)} unique labels but expected {len(valid_classes)} classes!")
+        
+        if np.max(y) >= len(valid_classes):
+            print(f"❌ ERROR: Maximum label {np.max(y)} is outside expected range [0, {len(valid_classes)-1}]!")
+            raise ValueError(f"Label values exceed expected class count. Check class filtering.")
         
         # Save class mappings
         self._save_class_mappings()

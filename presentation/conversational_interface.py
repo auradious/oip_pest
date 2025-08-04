@@ -352,6 +352,7 @@ def create_conversational_pest_interface():
                             confidence,
                             context_display
                         )
+                    
                 
                 # Handle uncertain or unclear cases
                 return (
