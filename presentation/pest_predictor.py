@@ -124,6 +124,30 @@ class PestPredictor:
             return img_array
         except Exception as e:
             raise ValueError(f"Error preprocessing image: {str(e)}")
+        try:
+            # Convert to PIL Image if needed
+            if not isinstance(image, Image.Image):
+                try:
+                    image = Image.fromarray(image)
+                except Exception as e:
+                    raise ValueError(f"Invalid image format: {str(e)}")
+            
+            # Resize to model input size
+            target_size = IMAGE_CONFIG['target_size']
+            image = image.resize(target_size)
+            
+            # Convert to RGB if needed
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Convert to numpy array and normalize
+            img_array = np.array(image)
+            img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+            img_array = img_array.astype('float32') / 255.0  # Normalize
+            
+            return img_array
+        except Exception as e:
+            raise ValueError(f"Error preprocessing image: {str(e)}")
     
     def get_treatment_recommendation(self, pest_class, confidence=0.0, language='en'):
         """
@@ -213,6 +237,12 @@ class PestPredictor:
         
         try:
             # Preprocess image
+            try:
+                processed_image = self.preprocess_image(image)
+                if processed_image is None:
+                    return lang_data['predictions']['no_image'], lang_data['predictions']['no_image_desc']
+            except ValueError as e:
+                return f"{lang_data['predictions']['error']}\n\n{str(e)}", lang_data['predictions']['error_desc']
             try:
                 processed_image = self.preprocess_image(image)
                 if processed_image is None:
