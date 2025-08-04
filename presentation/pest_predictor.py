@@ -35,14 +35,42 @@ class PestPredictor:
         try:
             # Try to load TensorFlow and model
             import tensorflow as tf
+            from tensorflow.keras.applications.mobilenet_v2 import preprocess_input as mobilenet_preprocess
             
-            # Load trained model
+            # Load trained model with custom objects
             model_path = MODEL_PATHS['best_model']
+            print(f"🔍 Looking for model at: {model_path}")
+            
             if model_path.exists():
-                self.model = tf.keras.models.load_model(model_path)
-                print(f"✅ Model loaded from {model_path}")
+                try:
+                    # Define custom objects for model loading
+                    custom_objects = {
+                        'mobilenet_preprocess': mobilenet_preprocess,
+                        'preprocess_input': mobilenet_preprocess,
+                    }
+                    
+                    # Load model with custom objects scope
+                    print(f"📥 Loading model with custom objects...")
+                    with tf.keras.utils.custom_object_scope(custom_objects):
+                        self.model = tf.keras.models.load_model(model_path)
+                    print(f"✅ Model loaded successfully from {model_path}")
+                except Exception as e:
+                    print(f"❌ Error loading model: {e}")
+                    print(f"💡 This might be due to missing custom objects or incompatible model format.")
+                    print(f"🔧 Try retraining the model or check the model file integrity.")
+                    self.model = None
             else:
-                print(f"❌ Model not found at {model_path}")
+                print(f"❌ Model file not found at: {model_path}")
+                print(f"📁 Available files in models directory:")
+                models_dir = model_path.parent
+                if models_dir.exists():
+                    for file in models_dir.iterdir():
+                        print(f"   - {file.name}")
+                else:
+                    print(f"   - Models directory doesn't exist")
+                print(f"🔧 Please ensure you have trained the model using:")
+                print(f"   1. python src/data_preprocessing.py")
+                print(f"   2. python src/mnhybrid_training.py")
                 self.model = None
                 
             # Load class mappings
@@ -72,24 +100,30 @@ class PestPredictor:
         if image is None:
             return None
             
-        # Convert to PIL Image if needed
-        if not isinstance(image, Image.Image):
-            image = Image.fromarray(image)
-        
-        # Resize to model input size
-        target_size = IMAGE_CONFIG['target_size']
-        image = image.resize(target_size)
-        
-        # Convert to RGB if needed
-        if image.mode != 'RGB':
-            image = image.convert('RGB')
-        
-        # Convert to numpy array and normalize
-        img_array = np.array(image)
-        img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
-        img_array = img_array.astype('float32') / 255.0  # Normalize
-        
-        return img_array
+        try:
+            # Convert to PIL Image if needed
+            if not isinstance(image, Image.Image):
+                try:
+                    image = Image.fromarray(image)
+                except Exception as e:
+                    raise ValueError(f"Invalid image format: {str(e)}")
+            
+            # Resize to model input size
+            target_size = IMAGE_CONFIG['target_size']
+            image = image.resize(target_size)
+            
+            # Convert to RGB if needed
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Convert to numpy array and normalize
+            img_array = np.array(image)
+            img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+            img_array = img_array.astype('float32') / 255.0  # Normalize
+            
+            return img_array
+        except Exception as e:
+            raise ValueError(f"Error preprocessing image: {str(e)}")
     
     def get_treatment_recommendation(self, pest_class, confidence=0.0, language='en'):
         """
@@ -179,7 +213,12 @@ class PestPredictor:
         
         try:
             # Preprocess image
-            processed_image = self.preprocess_image(image)
+            try:
+                processed_image = self.preprocess_image(image)
+                if processed_image is None:
+                    return lang_data['predictions']['no_image'], lang_data['predictions']['no_image_desc']
+            except ValueError as e:
+                return f"{lang_data['predictions']['error']}\n\n{str(e)}", lang_data['predictions']['error_desc']
             
             # Make prediction
             predictions = self.model.predict(processed_image, verbose=0)
