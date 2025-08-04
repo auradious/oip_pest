@@ -2,6 +2,9 @@
 .venv
 .venv-1
 */__pycache__/
+
 models/*.h5
+models/*.keras
+
 #ignore dataset
 dataset/

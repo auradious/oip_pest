@@ -1,7 +1,6 @@
 """
 Enhanced Conversational Interface for Organic Farm Pest Management AI System
 Includes chat functionality alongside image identification
-*CONVERSATIONAL CHATBOT INCLUDED*
 """
 
 import gradio as gr

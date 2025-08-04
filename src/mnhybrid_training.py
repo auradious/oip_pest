@@ -260,7 +260,7 @@ class HybridMobileNetCNN:
         stage1_history = self.model.fit(
             X_train, y_train,
             batch_size=32,
-            epochs=30,
+            epochs=10,
             validation_data=(X_val, y_val),
             callbacks=callbacks,
             verbose=1
@@ -291,7 +291,7 @@ class HybridMobileNetCNN:
         stage2_history = self.model.fit(
             X_train, y_train,
             batch_size=32,
-            epochs=50,
+            epochs=10,
             validation_data=(X_val, y_val),
             callbacks=callbacks,
             verbose=1
@@ -327,9 +327,12 @@ class HybridMobileNetCNN:
         else:
             print(f"⚠️ Can optimize hybrid architecture further")
 
-        # Save final model
+        # Save final model weights
         self.model.save_weights('./models/final_hybrid_mobilenet.weights.h5')
-        print(f"💾 Hybrid model saved!")
+        print(f"💾 Hybrid model weights saved!")
+
+        # Save complete model in .h5 format
+        self.save_model()
 
         # Detailed analysis
         self.show_detailed_results(X_test, y_test)
@@ -352,6 +355,38 @@ class HybridMobileNetCNN:
                 self.history = history_dict
         
         return MockHistory(combined)
+    
+    def save_model(self):
+        """
+        Save the trained model using the Keras v3 format (.keras extension)
+        """
+        if self.model is None:
+            print("❌ No model to save!")
+            return
+
+        # Create models directory if it doesn't exist
+        models_dir = Path(__file__).parent.parent / "models"
+        models_dir.mkdir(exist_ok=True)
+
+        # Use the .keras extension (Keras v3 format)
+        model_path = models_dir / "hybrid_mobilenet_pest_classifier.keras"
+
+        try:
+            print(f"\n💾 Saving hybrid model to {model_path} (.keras format)...")
+            self.model.save(str(model_path))  # Keras 3 native format
+            print(f"✅ Hybrid model saved successfully!")
+
+            # Show file info
+            if model_path.exists():
+                model_size = model_path.stat().st_size / (1024 * 1024)
+                print(f"📊 Model file size: {model_size:.2f} MB")
+                print(f"📁 Model location: {model_path}")
+
+        except Exception as e:
+            print(f"❌ Error saving model: {e}")
+            import traceback
+            traceback.print_exc()
+
     
     def calculate_top3_accuracy(self, y_true, y_pred_proba):
         """
@@ -501,7 +536,7 @@ class HybridMobileNetCNN:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
         
         epochs = range(1, len(self.history.history['accuracy']) + 1)
-        stage1_end = 30  # Where stage 1 ended
+        stage1_end = 10  # Where stage 1 ended
         
         # Accuracy
         ax1.plot(epochs, self.history.history['accuracy'], 'b-', label='Training', linewidth=2)

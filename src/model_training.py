@@ -236,10 +236,44 @@ class FixedPestCNN:
         else:
             print(f"❌ Still needs work")
 
+        # Save the trained model
+        self.save_model()
+        
         # Detailed results
         self.show_detailed_results(X_test, y_test)
 
         return test_accuracy
+    
+    def save_model(self):
+        """
+        Save the trained model to the models directory in .h5 format
+        """
+        if self.model is None:
+            print("❌ No model to save!")
+            return
+            
+        # Create models directory if it doesn't exist
+        models_dir = Path(__file__).parent.parent / "models"
+        models_dir.mkdir(exist_ok=True)
+        
+        # Save model in .h5 format
+        model_path = models_dir / "best_pest_classifier.h5"
+        
+        try:
+            print(f"\n💾 Saving model to {model_path}...")
+            self.model.save(str(model_path), save_format='h5')
+            print(f"✅ Model saved successfully!")
+            
+            # Print model info
+            if model_path.exists():
+                model_size = model_path.stat().st_size / (1024 * 1024)  # MB
+                print(f"📊 Model file size: {model_size:.2f} MB")
+                print(f"📁 Model location: {model_path}")
+            
+        except Exception as e:
+            print(f"❌ Error saving model: {e}")
+            import traceback
+            traceback.print_exc()
     
     def show_detailed_results(self, X_test, y_test):
         """

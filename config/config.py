@@ -86,7 +86,7 @@ TRAINING_CONFIG = {
 
 # Model file paths
 MODEL_PATHS = {
-    'best_model': MODELS_PATH / 'best_pest_classifier.h5',
+    'best_model': MODELS_PATH / 'hybrid_mobilenet_pest_classifier.keras',
     'final_model': MODELS_PATH / 'final_pest_classifier.h5',
     'model_weights': MODELS_PATH / 'model_weights.h5',
     'class_names': MODELS_PATH / 'class_names.json',
