@@ -30,7 +30,7 @@ class PestDataPreprocessor:
     
     def __init__(self, dataset_path=DATASET_PATH):
         self.dataset_path = Path(dataset_path)
-        self.harmful_classes = HARMFUL_PEST_CLASSES
+        self.target_classes = ALL_CLASSES  # Changed to include ALL classes (harmful + beneficial)
         self.target_size = MODEL_CONFIG['input_shape'][:2]
         self.class_to_idx = {}
         self.idx_to_class = {}
@@ -38,7 +38,9 @@ class PestDataPreprocessor:
         
         print(f"🔧 Initializing Data Preprocessor...")
         print(f"📂 Dataset path: {self.dataset_path}")
-        print(f"🎯 Target classes: {self.harmful_classes}")
+        print(f"🎯 Target classes: {self.target_classes}")
+        print(f"🐛 Harmful pests: {HARMFUL_PEST_CLASSES}")
+        print(f"🌟 Beneficial insects: {BENEFICIAL_CLASSES}")
         
     def explore_dataset(self):
         """
@@ -54,14 +56,16 @@ class PestDataPreprocessor:
         available_classes = [d.name for d in self.dataset_path.iterdir() if d.is_dir()]
         print(f"📁 Available classes in dataset: {available_classes}")
         
-        # Filter to only harmful pest classes (exclude beneficial insects)
-        filtered_classes = [cls for cls in available_classes if cls in self.harmful_classes]
-        print(f"🎯 Filtered to harmful pest classes: {filtered_classes}")
+        # Filter to include ALL target classes (harmful + beneficial)
+        filtered_classes = [cls for cls in available_classes if cls in self.target_classes]
+        print(f"🎯 Filtered to target classes: {filtered_classes}")
+        print(f"🐛 Harmful: {[cls for cls in filtered_classes if cls in HARMFUL_PEST_CLASSES]}")
+        print(f"🌟 Beneficial: {[cls for cls in filtered_classes if cls in BENEFICIAL_CLASSES]}")
         
-        # Count images in each harmful pest class
+        # Count images in each target class
         total_images = 0
         
-        for class_name in filtered_classes:  # Only process harmful pest classes
+        for class_name in filtered_classes:  # Process ALL target classes
             class_path = self.dataset_path / class_name
             
             if class_path.exists():
@@ -73,13 +77,21 @@ class PestDataPreprocessor:
                 self.class_counts[class_name] = count
                 total_images += count
                 
-                print(f"  📊 {class_name}: {count} images")
+                # Add emoji indicator for type
+                if class_name in HARMFUL_PEST_CLASSES:
+                    indicator = "🐛"
+                else:
+                    indicator = "🌟"
+                
+                print(f"  📊 {indicator} {class_name}: {count} images")
             else:
                 print(f"  ❌ {class_name}: Class folder not found!")
                 self.class_counts[class_name] = 0
         
-        print(f"\n📈 Total harmful pest images: {total_images}")
+        print(f"\n📈 Total images: {total_images}")
         print(f"🎯 Classes for training: {len([c for c in self.class_counts.values() if c > 0])}")
+        print(f"🐛 Harmful pest classes: {len([cls for cls, count in self.class_counts.items() if count > 0 and cls in HARMFUL_PEST_CLASSES])}")
+        print(f"🌟 Beneficial insect classes: {len([cls for cls, count in self.class_counts.items() if count > 0 and cls in BENEFICIAL_CLASSES])}")
         
         # Check for classes with insufficient data
         min_images_threshold = 10
@@ -108,26 +120,35 @@ class PestDataPreprocessor:
         # Create distribution plot
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(15, 12))
         
-        # Bar plot of class distribution
+        # Bar plot of class distribution with color coding
         classes = list(valid_counts.keys())
         counts = list(valid_counts.values())
-        colors = plt.cm.Set3(np.linspace(0, 1, len(classes)))
         
-        bars = ax1.bar(classes, counts, color=colors)
-        ax1.set_title('🐛 Harmful Pest Classes Distribution', fontsize=14, fontweight='bold')
-        ax1.set_xlabel('Pest Classes')
+        # Color code: red for harmful, green for beneficial
+        colors = ['red' if cls in HARMFUL_PEST_CLASSES else 'green' for cls in classes]
+        
+        bars = ax1.bar(classes, counts, color=colors, alpha=0.7)
+        ax1.set_title('🐛🌟 All Insect Classes Distribution', fontsize=14, fontweight='bold')
+        ax1.set_xlabel('Insect Classes')
         ax1.set_ylabel('Number of Images')
         ax1.tick_params(axis='x', rotation=45)
+        
+        # Add legend
+        from matplotlib.patches import Rectangle
+        legend_elements = [Rectangle((0,0),1,1, facecolor='red', alpha=0.7, label='🐛 Harmful Pests'),
+                          Rectangle((0,0),1,1, facecolor='green', alpha=0.7, label='🌟 Beneficial Insects')]
+        ax1.legend(handles=legend_elements)
         
         # Add value labels on bars
         for bar in bars:
             height = bar.get_height()
-            ax1.text(bar.get_x() + bar.get_width()/2., height + 0.5,
+            ax1.text(bar.get_x() + bar.get_width()/2., height + 5,
                     f'{int(height)}', ha='center', va='bottom', fontweight='bold')
         
-        # Pie chart
-        ax2.pie(counts, labels=classes, autopct='%1.1f%%', colors=colors, startangle=90)
-        ax2.set_title('📊 Class Distribution (Percentage)', fontsize=14, fontweight='bold')
+        # Pie chart with color coding
+        pie_colors = ['red' if cls in HARMFUL_PEST_CLASSES else 'green' for cls in classes]
+        ax2.pie(counts, labels=classes, autopct='%1.1f%%', colors=pie_colors, startangle=90)
+        ax2.set_title('📊 Class Distribution (🐛 Red = Harmful, 🌟 Green = Beneficial)', fontsize=14, fontweight='bold')
         
         # Economic impact vs. image count
         economic_data = [(cls, self.class_counts[cls], ECONOMIC_IMPACT.get(cls, 0)) 
@@ -152,14 +173,20 @@ class PestDataPreprocessor:
             urgency = TREATMENT_URGENCY.get(cls, 'Unknown')
             urgency_counts[urgency] = urgency_counts.get(urgency, 0) + valid_counts[cls]
         
-        urgency_colors = {'High': '#FF6B6B', 'Medium': '#FFA07A', 'Low': '#98D8C8'}
+        urgency_colors = {
+            'High': '#FF6B6B', 
+            'Medium': '#FFA07A', 
+            'Low': '#98D8C8',
+            'Protect': '#90EE90',  # Light green for beneficial insects
+            'Unknown': '#CCCCCC'
+        }
         urgency_labels = list(urgency_counts.keys())
         urgency_values = list(urgency_counts.values())
         colors_urgency = [urgency_colors.get(label, '#CCCCCC') for label in urgency_labels]
         
         ax4.pie(urgency_values, labels=urgency_labels, autopct='%1.1f%%', 
                colors=colors_urgency, startangle=90)
-        ax4.set_title('🚨 Treatment Urgency Distribution', fontsize=14, fontweight='bold')
+        ax4.set_title('🚨 Action Priority Distribution', fontsize=14, fontweight='bold')
         
         plt.tight_layout()
         plt.show()
@@ -191,13 +218,23 @@ class PestDataPreprocessor:
         if len(valid_classes) == 1:
             axes = axes.reshape(1, -1)
         
-        fig.suptitle('🖼️  Sample Images from Each Harmful Pest Class', 
+        fig.suptitle('🖼️  Sample Images from Each Insect Class (🐛 Harmful | 🌟 Beneficial)', 
                      fontsize=16, fontweight='bold', y=0.98)
         
         for i, class_name in enumerate(valid_classes):
             class_path = self.dataset_path / class_name
             image_files = list(class_path.glob('*'))
             image_files = [f for f in image_files if f.suffix.lower() in IMAGE_CONFIG['supported_formats']]
+            
+            # Determine if harmful or beneficial
+            if class_name in HARMFUL_PEST_CLASSES:
+                class_type = "🐛 Harmful"
+                impact_color = "red"
+                impact_value = ECONOMIC_IMPACT.get(class_name, "N/A")
+            else:
+                class_type = "🌟 Beneficial"
+                impact_color = "green"
+                impact_value = abs(ECONOMIC_IMPACT.get(class_name, 0))  # Show positive value for display
             
             for j in range(samples_per_class):
                 if j < len(image_files):
@@ -206,8 +243,8 @@ class PestDataPreprocessor:
                         img = img.convert('RGB')  # Ensure RGB format
                         
                         axes[i, j].imshow(img)
-                        axes[i, j].set_title(f'{class_name}\nEconomic Impact: {ECONOMIC_IMPACT.get(class_name, "N/A")}/5', 
-                                           fontsize=10, fontweight='bold')
+                        axes[i, j].set_title(f'{class_name}\n{class_type}\nImpact: {impact_value}/5', 
+                                           fontsize=10, fontweight='bold', color=impact_color)
                         axes[i, j].axis('off')
                         
                     except Exception as e:
@@ -415,7 +452,9 @@ class PestDataPreprocessor:
         mappings = {
             'class_to_idx': self.class_to_idx,
             'idx_to_class': self.idx_to_class,
-            'harmful_classes': self.harmful_classes,
+            'target_classes': self.target_classes,  # All classes (harmful + beneficial)
+            'harmful_classes': HARMFUL_PEST_CLASSES,
+            'beneficial_classes': BENEFICIAL_CLASSES,
             'class_counts': self.class_counts
         }
         
@@ -430,11 +469,15 @@ class PestDataPreprocessor:
         """
         summary = {
             'dataset_path': str(self.dataset_path),
-            'harmful_classes': self.harmful_classes,
+            'target_classes': self.target_classes,
+            'harmful_classes': HARMFUL_PEST_CLASSES,
+            'beneficial_classes': BENEFICIAL_CLASSES,
             'class_counts': self.class_counts,
             'target_size': self.target_size,
             'total_images': sum(self.class_counts.values()),
-            'num_classes': len([c for c in self.class_counts.values() if c > 0])
+            'num_classes': len([c for c in self.class_counts.values() if c > 0]),
+            'num_harmful': len([cls for cls, count in self.class_counts.items() if count > 0 and cls in HARMFUL_PEST_CLASSES]),
+            'num_beneficial': len([cls for cls, count in self.class_counts.items() if count > 0 and cls in BENEFICIAL_CLASSES])
         }
         
         return summary

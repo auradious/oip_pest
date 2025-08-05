@@ -40,7 +40,7 @@ ALL_CLASSES = HARMFUL_PEST_CLASSES + BENEFICIAL_CLASSES
 # Model configuration
 MODEL_CONFIG = {
     'input_shape': (224, 224, 3),
-    'num_classes': len(HARMFUL_PEST_CLASSES),
+    'num_classes': len(ALL_CLASSES),  # Changed to include ALL classes (harmful + beneficial)
     'batch_size': 32,
     'epochs': 25,
     'learning_rate': 0.001,
@@ -93,8 +93,9 @@ MODEL_PATHS = {
     'training_history': MODELS_PATH / 'training_history.json'
 }
 
-# Economic impact ratings for harmful pests (1-5 scale, 5 being most severe)
+# Economic impact ratings for all insects (1-5 scale, 5 being most severe for harmful, -1 to -5 for beneficial)
 ECONOMIC_IMPACT = {
+    # Harmful pests (positive values)
     'beetle': 4,      # High crop damage, leaf consumption
     'catterpillar': 5, # Very high - significant crop losses
     'earwig': 3,      # Moderate - plant and fruit damage
@@ -103,11 +104,17 @@ ECONOMIC_IMPACT = {
     'slug': 4,        # High - seedling and plant damage
     'snail': 4,       # High - plant consumption
     'wasp': 3,        # Moderate - fruit damage in some cases
-    'weevil': 5       # Very high - grain/seed damage
+    'weevil': 5,      # Very high - grain/seed damage
+    
+    # Beneficial insects (negative values indicate positive economic impact)
+    'ants': -3,       # Beneficial - pest control and soil aeration
+    'bees': -5,       # Extremely beneficial - pollination services
+    'earthworms': -4  # Highly beneficial - soil health and fertility
 }
 
 # Urgency levels for treatment (based on pest behavior and damage potential)
 TREATMENT_URGENCY = {
+    # Harmful pests
     'beetle': 'Medium',      # Can be managed with regular monitoring
     'catterpillar': 'High',   # Rapid reproduction and damage
     'earwig': 'Medium',      # Nocturnal, manageable with traps
@@ -116,7 +123,12 @@ TREATMENT_URGENCY = {
     'slug': 'Medium',        # Slow moving, but persistent damage
     'snail': 'Medium',       # Similar to slugs
     'wasp': 'Low',           # Usually beneficial, treat only if problematic
-    'weevil': 'High'         # Can destroy stored crops and seeds
+    'weevil': 'High',        # Can destroy stored crops and seeds
+    
+    # Beneficial insects (action type: Protect/Encourage)
+    'ants': 'Protect',       # Encourage presence for pest control
+    'bees': 'Protect',       # Critical to protect for pollination
+    'earthworms': 'Protect'  # Maintain soil conditions for their health
 }
 
 # Gradio Interface Configuration

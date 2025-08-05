@@ -1,26 +1,46 @@
 {
   "class_to_idx": {
-    "beetle": 0,
-    "catterpillar": 1,
-    "earwig": 2,
-    "grasshopper": 3,
-    "moth": 4,
-    "slug": 5,
-    "snail": 6,
-    "wasp": 7,
-    "weevil": 8
+    "ants": 0,
+    "bees": 1,
+    "beetle": 2,
+    "catterpillar": 3,
+    "earthworms": 4,
+    "earwig": 5,
+    "grasshopper": 6,
+    "moth": 7,
+    "slug": 8,
+    "snail": 9,
+    "wasp": 10,
+    "weevil": 11
   },
   "idx_to_class": {
-    "0": "beetle",
-    "1": "catterpillar",
-    "2": "earwig",
-    "3": "grasshopper",
-    "4": "moth",
-    "5": "slug",
-    "6": "snail",
-    "7": "wasp",
-    "8": "weevil"
+    "0": "ants",
+    "1": "bees",
+    "2": "beetle",
+    "3": "catterpillar",
+    "4": "earthworms",
+    "5": "earwig",
+    "6": "grasshopper",
+    "7": "moth",
+    "8": "slug",
+    "9": "snail",
+    "10": "wasp",
+    "11": "weevil"
   },
+  "target_classes": [
+    "beetle",
+    "catterpillar",
+    "earwig",
+    "grasshopper",
+    "moth",
+    "slug",
+    "snail",
+    "wasp",
+    "weevil",
+    "ants",
+    "bees",
+    "earthworms"
+  ],
   "harmful_classes": [
     "beetle",
     "catterpillar",
@@ -32,9 +52,17 @@
     "wasp",
     "weevil"
   ],
+  "beneficial_classes": [
+    "ants",
+    "bees",
+    "earthworms"
+  ],
   "class_counts": {
+    "ants": 499,
+    "bees": 500,
     "beetle": 416,
     "catterpillar": 434,
+    "earthworms": 323,
     "earwig": 466,
     "grasshopper": 485,
     "moth": 497,

@@ -265,11 +265,13 @@ class HybridMobileNetCNN:
 
         print(f"\n🎯 Classes ({num_classes}):")
         print(f"🔍 Class names loaded: {self.class_names}")
-        print(f"🔍 Expected harmful pest classes: {HARMFUL_PEST_CLASSES}")
+        print(f"🔍 Expected all classes: {ALL_CLASSES}")
+        print(f"🐛 Harmful pests: {HARMFUL_PEST_CLASSES}")
+        print(f"🌟 Beneficial insects: {BENEFICIAL_CLASSES}")
         
         # Validate that we have the expected classes
-        if num_classes != len(HARMFUL_PEST_CLASSES):
-            print(f"⚠️  WARNING: Found {num_classes} classes but config expects {len(HARMFUL_PEST_CLASSES)}!")
+        if num_classes != len(ALL_CLASSES):
+            print(f"⚠️  WARNING: Found {num_classes} classes but config expects {len(ALL_CLASSES)}!")
             print(f"🔍 Unique labels in y: {np.unique(y)}")
         
         for i, name in enumerate(self.class_names):
@@ -277,7 +279,16 @@ class HybridMobileNetCNN:
             val_count = np.sum(y_val == i)
             test_count = np.sum(y_test == i)
             total_count = train_count + val_count + test_count
-            print(f"  {name}: {train_count} train, {val_count} val, {test_count} test (total: {total_count})")
+            
+            # Add type indicator
+            if name in HARMFUL_PEST_CLASSES:
+                type_indicator = "🐛"
+            elif name in BENEFICIAL_CLASSES:
+                type_indicator = "🌟"
+            else:
+                type_indicator = "❓"
+            
+            print(f"  {type_indicator} {name}: {train_count} train, {val_count} val, {test_count} test (total: {total_count})")
 
         # Compute class weights for imbalanced dataset
         class_weights = self.compute_class_weights(y_train)

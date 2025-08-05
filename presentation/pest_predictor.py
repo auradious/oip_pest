@@ -133,15 +133,15 @@ class PestPredictor:
     
     def get_treatment_recommendation(self, pest_class, confidence=0.0, language='en'):
         """
-        Get organic treatment recommendations for identified pest
+        Get organic treatment recommendations for identified insect
         Uses Ollama AI as primary source, falls back to static recommendations
         """
-        # Check if pest is beneficial (no treatment needed)
-        if pest_class not in HARMFUL_PEST_CLASSES:
+        # Check if insect is beneficial (protection recommendations instead of treatment)
+        if pest_class in BENEFICIAL_CLASSES:
             lang_data = LANGUAGES.get(language, LANGUAGES[DEFAULT_LANGUAGE])
-            return lang_data['predictions']['no_treatment']
+            return self._get_beneficial_insect_recommendation(pest_class, confidence, language)
         
-        # Try Ollama first for AI-powered recommendations
+        # For harmful pests, try Ollama first for AI-powered recommendations
         try:
             if self.ollama_service.is_available:
                 print("🤖 Generating AI-powered treatment recommendation...")
@@ -156,6 +156,90 @@ class PestPredictor:
             print(f"❌ Error with Ollama service: {e}")
             print("🔄 Falling back to static recommendations...")
             return self._get_static_recommendation(pest_class, language)
+    
+    def _get_beneficial_insect_recommendation(self, insect_class, confidence, language='en'):
+        """
+        Get protection recommendations for beneficial insects
+        """
+        lang_data = LANGUAGES.get(language, LANGUAGES[DEFAULT_LANGUAGE])
+        
+        # Get insect characteristics
+        economic_benefit = abs(ECONOMIC_IMPACT.get(insect_class, 3))  # Convert negative to positive for display
+        protection_action = TREATMENT_URGENCY.get(insect_class, 'Protect')
+        
+        # Beneficial insect specific recommendations
+        beneficial_recommendations = {
+            'ants': """🌟 **Beneficial Pest Controller Detected**
+**Ants** are natural pest controllers that can help manage harmful insects in your garden.
+
+**Protection Recommendations:**
+• 🌱 **Preserve their habitat** - avoid disturbing ant colonies near garden areas
+• 🚫 **Avoid broad-spectrum pesticides** that could harm beneficial ants
+• 🍯 **Provide food sources** - plant flowers that produce nectar
+• 🏠 **Create shelter** - leave some undisturbed soil areas for nesting
+• 💧 **Maintain moisture** - ensure adequate water sources nearby
+
+**Benefits to Your Garden:**
+• Control aphids, caterpillars, and other harmful pests
+• Aerate soil through tunneling activities
+• Distribute organic matter throughout the soil""",
+
+            'bees': """🌟 **Critical Pollinator Detected**
+**Bees** are essential pollinators crucial for crop production and ecosystem health.
+
+**Protection Recommendations:**
+• 🌸 **Plant bee-friendly flowers** throughout the growing season
+• 🚫 **NEVER use pesticides** when bees are present
+• 🏠 **Provide nesting sites** - leave bare soil patches and plant stems
+• 💧 **Create water sources** - shallow dishes with landing spots
+• 🌿 **Avoid lawn chemicals** that can harm bee colonies
+• ⏰ **Time garden activities** to avoid peak bee activity hours
+
+**Critical Importance:**
+• Responsible for pollinating 1/3 of food crops
+• Essential for fruit and vegetable production
+• Support ecosystem biodiversity""",
+
+            'earthworms': """🌟 **Soil Health Engineer Detected**
+**Earthworms** are vital soil ecosystem engineers that improve growing conditions.
+
+**Protection Recommendations:**
+• 🌱 **Maintain organic matter** - add compost and leaf litter
+• 💧 **Keep soil moist** but not waterlogged
+• 🚫 **Avoid chemical fertilizers** that can harm worm populations
+• 🌿 **Use organic mulch** to provide food and shelter
+• 🔄 **Minimize soil disturbance** - reduce deep tilling
+• 🍂 **Leave organic debris** for them to decompose
+
+**Soil Benefits:**
+• Improve soil structure and drainage
+• Increase nutrient availability for plants
+• Enhance water retention capacity
+• Create natural fertilizer through castings"""
+        }
+        
+        recommendation = beneficial_recommendations.get(insect_class, 
+            f"""🌟 **Beneficial Insect Detected**
+This {insect_class} provides positive benefits to your garden ecosystem.
+
+**General Protection Guidelines:**
+• 🌱 Maintain diverse plant species to support beneficial insects
+• 🚫 Avoid broad-spectrum pesticides that harm beneficial species
+• 🏠 Provide shelter through diverse garden structures
+• 💧 Ensure adequate water sources
+• 🌿 Use organic gardening practices""")
+        
+        # Add economic benefit information
+        benefit_emojis = {1: "💚", 2: "💚💚", 3: "💚💚💚", 4: "💚💚💚💚", 5: "💚💚💚💚💚"}
+        
+        final_recommendation = f"""{recommendation}
+
+{benefit_emojis.get(economic_benefit, "💚💚💚")} **Economic Benefit: {economic_benefit}/5**
+🛡️ **Action Required: {protection_action}**
+
+⚠️ **Important:** This is a beneficial species that should be protected and encouraged, not treated as a pest!"""
+        
+        return final_recommendation
     
     def _get_static_recommendation(self, pest_class, language='en'):
         """
@@ -249,15 +333,25 @@ class PestPredictor:
             predicted_class = self.class_names['idx_to_class'].get(str(predicted_class_idx), 'Unknown')
             print(f"🎯 Final prediction: {predicted_class} with {confidence*100:.2f}% confidence")
             
-            # Format prediction result
+            # Format prediction result based on insect type
             confidence_percent = confidence * 100
             
-            if confidence < 0.15:
-                result = f"{lang_data['predictions']['uncertain']}\n\n{lang_data['predictions']['most_likely']} {predicted_class.title()}\n{lang_data['predictions']['confidence']} {confidence_percent:.1f}%\n\n{lang_data['predictions']['uncertain_desc']}"
-                recommendation = lang_data['predictions']['recommendation_unclear']
+            if predicted_class in BENEFICIAL_CLASSES:
+                # Beneficial insect detected
+                if confidence < 0.15:
+                    result = f"{lang_data['predictions']['uncertain']}\n\n🌟 Most likely: **{predicted_class.title()}** (Beneficial)\n{lang_data['predictions']['confidence']} {confidence_percent:.1f}%\n\n{lang_data['predictions']['uncertain_desc']}"
+                    recommendation = lang_data['predictions']['recommendation_unclear']
+                else:
+                    result = f"🌟 **Beneficial Insect Identified**\n\n**Species:** {predicted_class.title()}\n{lang_data['predictions']['confidence']} {confidence_percent:.1f}%\n\n✅ This is a helpful insect that benefits your garden!"
+                    recommendation = self.get_treatment_recommendation(predicted_class, confidence, language)
             else:
-                result = f"{lang_data['predictions']['identified']}\n\n{lang_data['predictions']['species']} {predicted_class.title()}\n{lang_data['predictions']['confidence']} {confidence_percent:.1f}%"
-                recommendation = self.get_treatment_recommendation(predicted_class, confidence, language)
+                # Harmful pest detected
+                if confidence < 0.15:
+                    result = f"{lang_data['predictions']['uncertain']}\n\n🐛 Most likely: **{predicted_class.title()}** (Harmful)\n{lang_data['predictions']['confidence']} {confidence_percent:.1f}%\n\n{lang_data['predictions']['uncertain_desc']}"
+                    recommendation = lang_data['predictions']['recommendation_unclear']
+                else:
+                    result = f"🐛 **Harmful Pest Identified**\n\n**Species:** {predicted_class.title()}\n{lang_data['predictions']['confidence']} {confidence_percent:.1f}%\n\n⚠️ Treatment may be needed to protect your crops."
+                    recommendation = self.get_treatment_recommendation(predicted_class, confidence, language)
             
             return result, recommendation
             
